@@ -1,52 +1,48 @@
-# CLAUDE.md
+# CLAUDE.md — Tiga-Skills
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+## Repository Overview
 
-## 仓库用途
+Tiga-Skills is an **Agent capability library** that organizes prompts, agent skills, workflows, and utility scripts into a structured, discoverable collection.
 
-`tiga-skills` 是一个用于备份和管理个人 Claude Code Skills 的仓库。Skills 按插件名分组存放，`README.md` 由脚本自动生成，**勿手动编辑**。
-
-## 常用命令
-
-手动重新生成 README.md：
-```bash
-bash scripts/update-readme.sh
-```
-
-## 架构说明
-
-### Skills 存放规范
+## Directory Structure
 
 ```
-skills/
-  {plugin-name}/        # 插件名（如 superpowers、commit-commands）
-    {skill-name}/       # skill 名（kebab-case）
-      SKILL.md          # skill 主文档，必须包含 YAML frontmatter
+Tiga-Skills/
+├── 00-skill-index/      # Unified index of all capabilities
+├── 01-prompts/          # Reusable prompt templates
+├── 02-agent-skills/     # Agent skills (SKILL.md format)
+├── 03-workflows/        # Multi-step workflow definitions
+├── 04-scripts/          # Utility scripts
+├── agent-plan/          # Agent-generated plan files
+├── AGENTS.md            # Agent behavior guidelines
+├── CLAUDE.md            # This file
+└── README.md            # Project overview (Chinese)
 ```
 
-每个 `SKILL.md` 必须有 YAML frontmatter，至少包含 `name` 和 `description`：
+## Conventions
+
+- **File names**: kebab-case (e.g., `my-awesome-skill`)
+- **Encoding**: UTF-8
+- **Content language**: Simplified Chinese for user-facing docs; English for config files (`CLAUDE.md`, `AGENTS.md`, YAML frontmatter)
+- **Markdown**: follow CommonMark spec
+
+## Skill Format
+
+Each skill lives under `02-agent-skills/{skill-name}/SKILL.md` with YAML frontmatter:
+
 ```yaml
 ---
 name: skill-name
-description: 一句话描述该 skill 的用途
+description: One-line description of what the skill does
 ---
 ```
 
-### 自动化机制
+Followed by the skill body in Markdown.
 
-`.claude/settings.json` 中配置了 PostToolUse hooks：
-- **Write hook**：当写入 `skills/` 下的文件后，自动触发 `hook-skill-change.sh`
-- **Bash hook**：当执行涉及 `skills/` 路径的 bash 命令（如删除）后，同样触发
+## Adding Content
 
-`hook-skill-change.sh` 解析 hook 事件 JSON（从 stdin），检查操作是否与 `skills/` 相关，若是则调用 `update-readme.sh`。
-
-`update-readme.py` 是核心脚本，扫描所有 `skills/*/*/SKILL.md`，解析 frontmatter，按插件分组生成 `README.md`。
-
-### 与 Claude Code 插件系统的关系
-
-Skills 在 Claude Code 中实际存储于：
-```
-~/.claude/plugins/cache/{publisher}/{plugin-name}/{version}/skills/{skill-name}/
-```
-
-此仓库作为独立备份，不直接被 Claude Code 加载。恢复时需手动复制到上述路径并在 `~/.claude/settings.json` 中启用对应插件。
+1. **Prompt** — create `01-prompts/{prompt-name}.md`
+2. **Skill** — create `02-agent-skills/{skill-name}/SKILL.md`
+3. **Workflow** — create `03-workflows/{workflow-name}.md`
+4. **Script** — add to `04-scripts/` with a brief header comment
+5. **Update index** — add an entry to `00-skill-index/README.md`
