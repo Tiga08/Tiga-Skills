@@ -1,15 +1,17 @@
 # macOS
 .DS_Store
-.DS_Store?
 ._*
-.Spotlight-V8
-.Trashes
 
-# 编辑器
-.vscode/
-.idea/
+# Editor
 *.swp
 *.swo
+*~
+.vscode/
+.idea/
 
-# 系统
-Thumbs.db
+# Environment
+.env
+.env.local
+
+# Agents
+agent-plan/
