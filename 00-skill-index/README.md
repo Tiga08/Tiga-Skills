@@ -12,7 +12,7 @@
 
 | 名称 | 说明 | 路径 |
 |------|------|------|
-| — | 暂无 | — |
+| md-to-zh | 将英文 Markdown 翻译为简体中文（.zh.md） | `02-agent-skills/skills/md-to-zh/` |
 
 ## 工作流
 
@@ -24,4 +24,5 @@
 
 | 名称 | 说明 | 路径 |
 |------|------|------|
-| link-skills.sh | 将 02-agent-skills 软链接到 ~/.claude/skills 和 ~/.codex/skills | `04-scripts/link-skills.sh` |
+| link-skills.sh | 将 Skills 逐个链接到本机 agent 配置目录 | `04-scripts/link-skills.sh` |
+| manage-skills.sh | 管理外部 Skill 的导入、移除、查询和更新 | `04-scripts/manage-skills.sh` |
