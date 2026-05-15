@@ -16,6 +16,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 SKILLS_DIR="$REPO_ROOT/02-agent-skills/skills"
 REGISTRY="$REPO_ROOT/02-agent-skills/skill-registry.json"
+SKILL_INDEX="$REPO_ROOT/00-skill-index/README.md"
 
 usage() {
   cat <<EOF
@@ -60,6 +61,106 @@ if entries:
 else:
     sys.exit(1)
 " "$REGISTRY" "$name"
+}
+
+update_skill_index() {
+  local skill_name="$1"
+  local skill_md="$SKILLS_DIR/$skill_name/SKILL.md"
+
+  if [ ! -f "$SKILL_INDEX" ] || [ ! -f "$skill_md" ]; then
+    return 0
+  fi
+
+  if grep -q "| $skill_name |" "$SKILL_INDEX" 2>/dev/null; then
+    return 0
+  fi
+
+  local description
+  description="$(python3 -c "
+import sys, re
+
+with open(sys.argv[1]) as f:
+    text = f.read()
+
+desc = ''
+m = re.search(r'^---\s*\n(.*?)\n---', text, re.DOTALL)
+if m:
+    fm = m.group(1)
+    # Match description: possibly followed by quoted or unquoted value
+    dm = re.search(r'^description:\s*(.+)', fm, re.MULTILINE)
+    if dm:
+        val = dm.group(1).strip()
+        # Strip matching quotes (single or double)
+        if len(val) >= 2 and val[0] == val[-1] and val[0] in ('\"', \"'\"):
+            val = val[1:-1]
+        desc = val
+
+# Truncate: first sentence, max 80 chars
+if '. ' in desc:
+    desc = desc[:desc.index('. ') + 1]
+if len(desc) > 80:
+    desc = desc[:77] + '…'
+
+# Escape pipe for Markdown tables
+desc = desc.replace('|', r'\|')
+
+print(desc)
+" "$skill_md")"
+
+  if [ -z "$description" ]; then
+    description="(no description)"
+  fi
+
+  local index_line="| $skill_name | $description | \`02-agent-skills/skills/$skill_name/\` |"
+
+  python3 -c "
+import sys
+index_file = sys.argv[1]
+new_line = sys.argv[2]
+with open(index_file) as f:
+    lines = f.readlines()
+insert_pos = None
+in_agent_skills = False
+for i, line in enumerate(lines):
+    if line.strip() == '## Agent Skills':
+        in_agent_skills = True
+    elif in_agent_skills and line.startswith('## '):
+        insert_pos = i
+        break
+    elif in_agent_skills and line.startswith('|') and not line.startswith('| 名称') and not line.startswith('|--'):
+        insert_pos = i + 1
+if insert_pos is None:
+    insert_pos = len(lines)
+lines.insert(insert_pos, new_line + '\n')
+with open(index_file, 'w') as f:
+    f.writelines(lines)
+" "$SKILL_INDEX" "$index_line"
+
+  echo -e "${CYAN}Updated skill index: $skill_name${NC}"
+}
+
+remove_from_skill_index() {
+  local skill_name="$1"
+
+  if [ ! -f "$SKILL_INDEX" ]; then
+    return 0
+  fi
+
+  if ! grep -q "| $skill_name |" "$SKILL_INDEX" 2>/dev/null; then
+    return 0
+  fi
+
+  python3 -c "
+import sys
+with open(sys.argv[1]) as f:
+    lines = f.readlines()
+with open(sys.argv[1], 'w') as f:
+    for line in lines:
+        if not line.strip().startswith('| ' + sys.argv[2] + ' |'):
+            f.write(line)
+" "$SKILL_INDEX" "$skill_name"
+
+  echo -e "${CYAN}Removed from skill index: $skill_name${NC}"
 }
 
 # --- import ---
@@ -136,6 +237,8 @@ with open(sys.argv[1], 'w') as f:
     f.write('\n')
 " "$REGISTRY" "$skill_name" "$source_path" "$now" "$source_hash"
 
+  update_skill_index "$skill_name"
+
   echo -e "${GREEN}Imported: $skill_name -> $target_dir${NC}"
 }
 
@@ -171,6 +274,8 @@ with open(sys.argv[1], 'w') as f:
     json.dump(data, f, indent=2, ensure_ascii=False)
     f.write('\n')
 " "$REGISTRY" "$skill_name"
+
+  remove_from_skill_index "$skill_name"
 
   echo -e "${GREEN}Removed: $skill_name${NC}"
 }
@@ -291,6 +396,8 @@ with open(sys.argv[1], 'w') as f:
     json.dump(data, f, indent=2, ensure_ascii=False)
     f.write('\n')
 " "$REGISTRY" "$skill_name" "$now" "$source_hash"
+
+  update_skill_index "$skill_name"
 
   echo -e "${GREEN}Updated: $skill_name${NC}"
 }

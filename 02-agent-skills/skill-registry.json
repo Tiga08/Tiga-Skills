@@ -1,4 +1,19 @@
 {
   "version": 2,
-  "skills": []
+  "skills": [
+    {
+      "name": "wecom-doc-to-md",
+      "source": "/Users/bruce/Projects/Tiga/Life/.claude/skills/wecom-doc-to-md",
+      "importedAt": "2026-05-15T06:28:22+00:00",
+      "updatedAt": "2026-05-15T06:28:22+00:00",
+      "sourceHash": "50a84391"
+    },
+    {
+      "name": "md-to-zh",
+      "source": "/Users/bruce/.agents/skills/md-to-zh",
+      "importedAt": "2026-05-15T07:02:15+00:00",
+      "updatedAt": "2026-05-15T07:02:15+00:00",
+      "sourceHash": "28d37ebd"
+    }
+  ]
 }
