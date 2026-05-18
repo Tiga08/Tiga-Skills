@@ -45,14 +45,14 @@
 
 ### manage-skills.sh
 
-从外部仓库（如 `khazix-skills`）导入 Skill 到本项目，或移除已导入的 Skill。导入记录保存在 `02-agent-skills/skill-registry.json` 中。
+从外部仓库（如 `khazix-skills`）导入 Skill 到本项目，或移除已导入的 Skill。导入记录保存在 `02-agent-skills/skill-registry.json` 中。可通过 `--description` 参数为导入或更新的 Skill 指定自定义说明，覆盖 SKILL.md 中的 description 字段。
 
 ```bash
-./04-scripts/manage-skills.sh import <source-path>  # 导入外部 Skill
-./04-scripts/manage-skills.sh remove <skill-name>    # 移除已导入的 Skill
-./04-scripts/manage-skills.sh list                   # 列出已导入的 Skill
-./04-scripts/manage-skills.sh status                 # 检查上游是否有更新
-./04-scripts/manage-skills.sh update <skill-name>    # 从来源重新导入
+./04-scripts/manage-skills.sh import [--description "说明"] <source-path>  # 导入外部 Skill
+./04-scripts/manage-skills.sh remove <skill-name>                         # 移除已导入的 Skill
+./04-scripts/manage-skills.sh list                                        # 列出已导入的 Skill
+./04-scripts/manage-skills.sh status                                      # 检查上游是否有更新
+./04-scripts/manage-skills.sh update [--description "说明"] <skill-name>   # 从来源重新导入
 ```
 
 `remove` 仅可移除 registry 中登记的外部 Skill，不会误删本仓库原生 Skill。

@@ -10,10 +10,12 @@
 
 ## Agent Skills
 
-| 名称 | 说明 | 路径 |
-|------|------|------|
-| md-to-zh | 将英文 Markdown 翻译为简体中文（.zh.md） | `02-agent-skills/skills/md-to-zh/` |
-| wecom-doc-to-md | 从企业微信文档链接提取可验证内容和元数据，生成 Markdown | `02-agent-skills/skills/wecom-doc-to-md/` |
+| 名称 | 说明 |
+|------|------|
+| md-to-zh | 将英文 Markdown 翻译为简体中文（.zh.md） |
+| baoyu-url-to-markdown | 通过 baoyu-fetch CLI（Chrome CDP + 站点适配器）抓取任意 URL 并转换为 Markdown，内置 X/Twitter、YouTube 字幕、Hacker News 等适配器 |
+| baoyu-markdown-to-html | 将 Markdown 转换为带样式的 HTML，支持微信兼容主题、代码高亮、数学公式、PlantUML、脚注、提示框和外链转底部引用 |
+| baoyu-format-markdown | 格式化纯文本或 Markdown 文件，自动添加 frontmatter、标题、摘要、层级标题、粗体、列表和代码块 |
 
 ## 工作流
 
