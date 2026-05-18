@@ -2,18 +2,36 @@
   "version": 2,
   "skills": [
     {
-      "name": "wecom-doc-to-md",
-      "source": "/Users/bruce/Projects/Tiga/Life/.claude/skills/wecom-doc-to-md",
-      "importedAt": "2026-05-15T06:28:22+00:00",
-      "updatedAt": "2026-05-15T06:28:22+00:00",
-      "sourceHash": "50a84391"
-    },
-    {
       "name": "md-to-zh",
       "source": "/Users/bruce/.agents/skills/md-to-zh",
       "importedAt": "2026-05-15T07:02:15+00:00",
       "updatedAt": "2026-05-15T07:02:15+00:00",
-      "sourceHash": "28d37ebd"
+      "sourceHash": "28d37ebd",
+      "description": "将英文 Markdown 翻译为简体中文（.zh.md）"
+    },
+    {
+      "name": "baoyu-format-markdown",
+      "source": "/Users/bruce/Projects/AG-Tools/baoyu-skills/skills/baoyu-format-markdown",
+      "importedAt": "2026-05-15T08:58:44+00:00",
+      "updatedAt": "2026-05-15T09:18:25+00:00",
+      "sourceHash": "0a999079",
+      "description": "格式化纯文本或 Markdown 文件，自动添加 frontmatter、标题、摘要、层级标题、粗体、列表和代码块"
+    },
+    {
+      "name": "baoyu-url-to-markdown",
+      "source": "/Users/bruce/Projects/AG-Tools/baoyu-skills/skills/baoyu-url-to-markdown",
+      "importedAt": "2026-05-15T08:59:18+00:00",
+      "updatedAt": "2026-05-15T08:59:18+00:00",
+      "sourceHash": "bb46e168",
+      "description": "通过 baoyu-fetch CLI（Chrome CDP + 站点适配器）抓取任意 URL 并转换为 Markdown，内置 X/Twitter、YouTube 字幕、Hacker News 等适配器"
+    },
+    {
+      "name": "baoyu-markdown-to-html",
+      "source": "/Users/bruce/Projects/AG-Tools/baoyu-skills/skills/baoyu-markdown-to-html",
+      "importedAt": "2026-05-15T09:17:06+00:00",
+      "updatedAt": "2026-05-15T09:17:27+00:00",
+      "sourceHash": "b65418a1",
+      "description": "将 Markdown 转换为带样式的 HTML，支持微信兼容主题、代码高亮、数学公式、PlantUML、脚注、提示框和外链转底部引用"
     }
   ]
 }

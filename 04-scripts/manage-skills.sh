@@ -23,14 +23,17 @@ usage() {
 Usage: $(basename "$0") <command> [options]
 
 Commands:
-  import <source-path>     Import a skill from an external path
+  import [--description "说明"] <source-path>
+                           Import a skill from an external path
   remove <skill-name>      Remove an imported skill
   list                     List all imported skills
   status                   Check for upstream changes
-  update <skill-name>      Update an imported skill from source
+  update [--description "说明"] <skill-name>
+                           Update an imported skill from source
 
 Examples:
   $(basename "$0") import /path/to/khazix-skills/skills/my-skill
+  $(basename "$0") import --description "将 Markdown 转为 HTML" /path/to/skills/md-to-html
   $(basename "$0") remove my-skill
   $(basename "$0") list
   $(basename "$0") status
@@ -63,11 +66,30 @@ else:
 " "$REGISTRY" "$name"
 }
 
+extract_english_description() {
+  local skill_md="$1"
+  python3 -c "
+import sys, re
+with open(sys.argv[1]) as f:
+    text = f.read()
+desc = ''
+m = re.search(r'^---\s*\n(.*?)\n---', text, re.DOTALL)
+if m:
+    dm = re.search(r'^description:\s*(.+)', m.group(1), re.MULTILINE)
+    if dm:
+        val = dm.group(1).strip()
+        if len(val) >= 2 and val[0] == val[-1] and val[0] in ('\"', \"'\"):
+            val = val[1:-1]
+        desc = val
+print(desc)
+" "$skill_md"
+}
+
 update_skill_index() {
   local skill_name="$1"
-  local skill_md="$SKILLS_DIR/$skill_name/SKILL.md"
+  local description="$2"
 
-  if [ ! -f "$SKILL_INDEX" ] || [ ! -f "$skill_md" ]; then
+  if [ ! -f "$SKILL_INDEX" ]; then
     return 0
   fi
 
@@ -75,43 +97,13 @@ update_skill_index() {
     return 0
   fi
 
-  local description
-  description="$(python3 -c "
-import sys, re
-
-with open(sys.argv[1]) as f:
-    text = f.read()
-
-desc = ''
-m = re.search(r'^---\s*\n(.*?)\n---', text, re.DOTALL)
-if m:
-    fm = m.group(1)
-    # Match description: possibly followed by quoted or unquoted value
-    dm = re.search(r'^description:\s*(.+)', fm, re.MULTILINE)
-    if dm:
-        val = dm.group(1).strip()
-        # Strip matching quotes (single or double)
-        if len(val) >= 2 and val[0] == val[-1] and val[0] in ('\"', \"'\"):
-            val = val[1:-1]
-        desc = val
-
-# Truncate: first sentence, max 80 chars
-if '. ' in desc:
-    desc = desc[:desc.index('. ') + 1]
-if len(desc) > 80:
-    desc = desc[:77] + '…'
-
-# Escape pipe for Markdown tables
-desc = desc.replace('|', r'\|')
-
-print(desc)
-" "$skill_md")"
-
   if [ -z "$description" ]; then
     description="(no description)"
   fi
 
-  local index_line="| $skill_name | $description | \`02-agent-skills/skills/$skill_name/\` |"
+  description="$(echo "$description" | sed 's/|/\\|/g')"
+
+  local index_line="| $skill_name | $description |"
 
   python3 -c "
 import sys
@@ -125,7 +117,8 @@ for i, line in enumerate(lines):
     if line.strip() == '## Agent Skills':
         in_agent_skills = True
     elif in_agent_skills and line.startswith('## '):
-        insert_pos = i
+        if insert_pos is None:
+            insert_pos = i
         break
     elif in_agent_skills and line.startswith('|') and not line.startswith('| 名称') and not line.startswith('|--'):
         insert_pos = i + 1
@@ -165,11 +158,25 @@ with open(sys.argv[1], 'w') as f:
 
 # --- import ---
 cmd_import() {
-  local source_path="${1:-}"
+  local user_description=""
+  local source_path=""
+
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --description)
+        user_description="${2:-}"
+        shift 2
+        ;;
+      *)
+        source_path="$1"
+        shift
+        ;;
+    esac
+  done
 
   if [ -z "$source_path" ]; then
     echo -e "${RED}Error: source path is required${NC}" >&2
-    echo "Usage: $(basename "$0") import <source-path>" >&2
+    echo "Usage: $(basename "$0") import [--description \"说明\"] <source-path>" >&2
     exit 1
   fi
 
@@ -210,6 +217,21 @@ cmd_import() {
     fi
   fi
 
+  local en_desc
+  en_desc="$(extract_english_description "$source_path/SKILL.md")"
+
+  local description="$user_description"
+  if [ -z "$description" ]; then
+    if [ -t 0 ]; then
+      echo -e "${CYAN}English description: ${en_desc:-（无）}${NC}"
+      printf "请输入中文说明（回车跳过使用英文）: "
+      read -r description
+    fi
+  fi
+  if [ -z "$description" ]; then
+    description="$en_desc"
+  fi
+
   cp -R "$source_path" "$target_dir"
 
   local source_hash
@@ -230,14 +252,15 @@ data['skills'].append({
     'source': sys.argv[3],
     'importedAt': sys.argv[4],
     'updatedAt': sys.argv[4],
-    'sourceHash': sys.argv[5]
+    'sourceHash': sys.argv[5],
+    'description': sys.argv[6]
 })
 with open(sys.argv[1], 'w') as f:
     json.dump(data, f, indent=2, ensure_ascii=False)
     f.write('\n')
-" "$REGISTRY" "$skill_name" "$source_path" "$now" "$source_hash"
+" "$REGISTRY" "$skill_name" "$source_path" "$now" "$source_hash" "$description"
 
-  update_skill_index "$skill_name"
+  update_skill_index "$skill_name" "$description"
 
   echo -e "${GREEN}Imported: $skill_name -> $target_dir${NC}"
 }
@@ -336,11 +359,25 @@ for s in skills:
 
 # --- update ---
 cmd_update() {
-  local skill_name="${1:-}"
+  local user_description=""
+  local skill_name=""
+
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --description)
+        user_description="${2:-}"
+        shift 2
+        ;;
+      *)
+        skill_name="$1"
+        shift
+        ;;
+    esac
+  done
 
   if [ -z "$skill_name" ]; then
     echo -e "${RED}Error: skill name is required${NC}" >&2
-    echo "Usage: $(basename "$0") update <skill-name>" >&2
+    echo "Usage: $(basename "$0") update [--description \"说明\"] <skill-name>" >&2
     exit 1
   fi
 
@@ -377,6 +414,14 @@ cmd_update() {
     return 0
   fi
 
+  local description="$user_description"
+  if [ -z "$description" ]; then
+    description="$(echo "$record" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('description',''))")"
+  fi
+  if [ -z "$description" ]; then
+    description="$(extract_english_description "$source_path/SKILL.md")"
+  fi
+
   rm -rf "$target_dir"
   cp -R "$source_path" "$target_dir"
 
@@ -391,13 +436,15 @@ for s in data['skills']:
     if s['name'] == sys.argv[2]:
         s['updatedAt'] = sys.argv[3]
         s['sourceHash'] = sys.argv[4]
+        s['description'] = sys.argv[5]
         break
 with open(sys.argv[1], 'w') as f:
     json.dump(data, f, indent=2, ensure_ascii=False)
     f.write('\n')
-" "$REGISTRY" "$skill_name" "$now" "$source_hash"
+" "$REGISTRY" "$skill_name" "$now" "$source_hash" "$description"
 
-  update_skill_index "$skill_name"
+  remove_from_skill_index "$skill_name"
+  update_skill_index "$skill_name" "$description"
 
   echo -e "${GREEN}Updated: $skill_name${NC}"
 }
