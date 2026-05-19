@@ -27,18 +27,21 @@
 
 | 脚本 | 说明 |
 |------|------|
-| `link-skills.sh` | 将 Skills 逐个链接到本机 agent 配置目录 |
+| `link-skills.sh` | 将 Skills 逐个链接到本机 agent 配置目录（扫描 `02-agent-skills/skills/` 和 `05-custom-skills/skills/`） |
 | `manage-skills.sh` | 管理外部 Skill 的导入、移除、查询和更新 |
+| `sync-index.sh` | 同步自定义 Skills 到能力索引 |
 
 ### link-skills.sh
 
 ```bash
-./04-scripts/link-skills.sh              # 链接到所有 agent
+./04-scripts/link-skills.sh              # 链接到所有 agent（默认 --all）
 ./04-scripts/link-skills.sh --claude     # 链接到 ~/.claude/skills
 ./04-scripts/link-skills.sh --codex      # 链接到 ~/.codex/skills
 ./04-scripts/link-skills.sh --agents     # 链接到 ~/.agents/skills
-./04-scripts/link-skills.sh --unlink     # 移除 symlink
 ./04-scripts/link-skills.sh --skill foo  # 仅处理指定 skill
+./04-scripts/link-skills.sh --claude --codex --skill foo  # 仅链接指定 skill 到指定 agent
+./04-scripts/link-skills.sh --unlink                      # 移除所有 skill 的 symlink
+./04-scripts/link-skills.sh --unlink --skill foo          # 仅移除指定 skill 的 symlink
 ```
 
 每个 Skill 单独创建 symlink，不影响目标目录已有内容（如 `~/.codex/skills/.system/`）。
@@ -53,9 +56,33 @@
 ./04-scripts/manage-skills.sh list                                        # 列出已导入的 Skill
 ./04-scripts/manage-skills.sh status                                      # 检查上游是否有更新
 ./04-scripts/manage-skills.sh update [--description "说明"] <skill-name>   # 从来源重新导入
+./04-scripts/manage-skills.sh update --description "新说明" my-skill       # 仅更新说明
 ```
 
 `remove` 仅可移除 registry 中登记的外部 Skill，不会误删本仓库原生 Skill。
+
+### sync-index.sh
+
+扫描 `05-custom-skills/skills/` 目录，自动更新 `00-skill-index/README.md` 中的"自定义 Skills"章节。
+
+```bash
+./04-scripts/sync-index.sh              # 同步索引
+./04-scripts/sync-index.sh --dry-run    # 仅预览，不修改文件
+```
+
+## 常见操作
+
+### 完整移除一个已导入的 Skill
+
+1. 取消 symlink：`./04-scripts/link-skills.sh --unlink --skill <skill-name>`
+2. 从 registry 移除并删除文件：`./04-scripts/manage-skills.sh remove <skill-name>`
+3. 从 `00-skill-index/README.md` 中删除对应条目（`manage-skills.sh remove` 会自动处理）
+
+### 仅对某个 agent 取消链接
+
+```bash
+./04-scripts/link-skills.sh --unlink --claude --skill <skill-name>
+```
 
 ## 登记
 
