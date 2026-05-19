@@ -21,6 +21,8 @@ Tiga-Skills/
 │   └── skills/          # All skills in one directory
 ├── 03-workflows/        # Multi-step workflow definitions
 ├── 04-scripts/          # Utility scripts
+├── 05-custom-skills/    # User-defined custom skills
+│   └── skills/          # Custom skill directory
 ├── agent-plan/          # Agent-generated plan files
 ├── AGENTS.md            # Agent behavior guidelines
 ├── CLAUDE.md            # Claude Code configuration
@@ -36,7 +38,7 @@ Tiga-Skills/
 
 ## Skill Format
 
-Each skill lives under `02-agent-skills/skills/{skill-name}/SKILL.md` with YAML frontmatter:
+Each skill lives under `02-agent-skills/skills/{skill-name}/SKILL.md` or `05-custom-skills/skills/{skill-name}/SKILL.md` with YAML frontmatter:
 
 ```yaml
 ---
@@ -54,9 +56,10 @@ Followed by the skill body in Markdown.
 
 1. **Prompt** — create `01-prompts/{prompt-name}.md`
 2. **Skill** — create `02-agent-skills/skills/{skill-name}/SKILL.md`
-3. **Workflow** — create `03-workflows/{workflow-name}.md`
-4. **Script** — add to `04-scripts/` with a brief header comment
-5. **Update index** — add an entry to `00-skill-index/README.md`
+3. **Custom Skill** — create `05-custom-skills/skills/{skill-name}/SKILL.md`
+4. **Workflow** — create `03-workflows/{workflow-name}.md`
+5. **Script** — add to `04-scripts/` with a brief header comment
+6. **Update index** — add an entry to `00-skill-index/README.md`
 
 ## Linking Agent Skills
 
@@ -69,7 +72,7 @@ Use `04-scripts/link-skills.sh` to link individual skills into local agent confi
 ./04-scripts/link-skills.sh --skill foo  # Process a single skill
 ```
 
-Each skill is symlinked individually, preserving existing content in the target directory.
+The script scans both `02-agent-skills/skills/` and `05-custom-skills/skills/`. Each skill is symlinked individually, preserving existing content in the target directory.
 
 ## Importing External Skills
 

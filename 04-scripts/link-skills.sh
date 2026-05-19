@@ -14,7 +14,10 @@ NC='\033[0m'
 # --- 路径 ---
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-SKILLS_DIR="$REPO_ROOT/02-agent-skills/skills"
+SKILLS_DIRS=(
+  "$REPO_ROOT/02-agent-skills/skills"
+  "$REPO_ROOT/05-custom-skills/skills"
+)
 
 ALL_AGENTS=(claude codex agents)
 
@@ -130,7 +133,7 @@ should_link() {
 link_skill() {
   local skill_name="$1"
   local agent="$2"
-  local source="$SKILLS_DIR/$skill_name"
+  local source="$3"
   local target_dir
   target_dir="$(agent_target_dir "$agent")"
   local target="$target_dir/$skill_name"
@@ -197,7 +200,7 @@ process_skill() {
       unlink_skill "$skill_name" "$agent"
     else
       if should_link "$skill_md" "$agent"; then
-        link_skill "$skill_name" "$agent"
+        link_skill "$skill_name" "$agent" "$skill_dir"
       else
         echo -e "  · $agent: skipped (not in agents list)"
       fi
@@ -228,22 +231,33 @@ if [ "${#SELECTED_AGENTS[@]}" -eq 0 ]; then
 fi
 
 # --- 检查 skills 目录 ---
-if [ ! -d "$SKILLS_DIR" ]; then
-  echo -e "${RED}Error: skills directory not found: $SKILLS_DIR${NC}" >&2
-  exit 1
-fi
+for skills_dir in "${SKILLS_DIRS[@]}"; do
+  if [ ! -d "$skills_dir" ]; then
+    echo -e "${YELLOW}Warning: skills directory not found: $skills_dir${NC}"
+  fi
+done
 
 # --- 主循环 ---
 if [ -n "$FILTER_SKILL" ]; then
-  if [ ! -d "$SKILLS_DIR/$FILTER_SKILL" ]; then
+  found=false
+  for skills_dir in "${SKILLS_DIRS[@]}"; do
+    if [ -d "$skills_dir/$FILTER_SKILL" ]; then
+      process_skill "$skills_dir/$FILTER_SKILL"
+      found=true
+      break
+    fi
+  done
+  if ! $found; then
     echo -e "${RED}Error: skill not found: $FILTER_SKILL${NC}" >&2
     exit 1
   fi
-  process_skill "$SKILLS_DIR/$FILTER_SKILL"
 else
-  for skill_dir in "$SKILLS_DIR"/*/; do
-    [ -d "$skill_dir" ] || continue
-    process_skill "$skill_dir"
+  for skills_dir in "${SKILLS_DIRS[@]}"; do
+    [ -d "$skills_dir" ] || continue
+    for skill_dir in "$skills_dir"/*/; do
+      [ -d "$skill_dir" ] || continue
+      process_skill "$skill_dir"
+    done
   done
 fi
 
