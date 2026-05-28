@@ -58,9 +58,10 @@ while [ $# -gt 0 ]; do
   esac
 done
 
-# --- 构建表格行 ---
+# --- 构建表格行（按名称排序） ---
 TABLE_ROWS=""
 if [ -d "$CUSTOM_SKILLS_DIR" ]; then
+  UNSORTED_ROWS=""
   for skill_dir in "$CUSTOM_SKILLS_DIR"/*/; do
     [ -d "$skill_dir" ] || continue
     skill_md="$skill_dir/SKILL.md"
@@ -72,9 +73,14 @@ if [ -d "$CUSTOM_SKILLS_DIR" ]; then
       description="(no description)"
     fi
     description="$(echo "$description" | sed 's/|/\\|/g')"
-    TABLE_ROWS="${TABLE_ROWS}| ${skill_name} | ${description} |
+    UNSORTED_ROWS="${UNSORTED_ROWS}| ${skill_name} | ${description} |
 "
   done
+  TABLE_ROWS="$(printf '%s' "$UNSORTED_ROWS" | sort)"
+  if [ -n "$TABLE_ROWS" ]; then
+    TABLE_ROWS="${TABLE_ROWS}
+"
+  fi
 fi
 
 if [ -z "$TABLE_ROWS" ]; then

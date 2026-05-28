@@ -30,6 +30,7 @@
 | `link-skills.sh` | 将 Skills 逐个链接到本机 agent 配置目录（扫描 `02-agent-skills/skills/` 和 `05-custom-skills/skills/`） |
 | `manage-skills.sh` | 管理外部 Skill 的导入、移除、查询和更新 |
 | `sync-index.sh` | 同步自定义 Skills 到能力索引 |
+| `sync-upstream.sh` | 从上游 GitHub 仓库同步已导入的 Skills |
 
 ### link-skills.sh
 
@@ -69,6 +70,34 @@
 ./04-scripts/sync-index.sh              # 同步索引
 ./04-scripts/sync-index.sh --dry-run    # 仅预览，不修改文件
 ```
+
+### sync-upstream.sh
+
+从上游 GitHub 仓库拉取更新，并同步到 `02-agent-skills/skills/` 下的已导入 Skill。需先将上游仓库注册到 `skill-registry.json` 中。
+
+```bash
+# 注册上游仓库
+./04-scripts/sync-upstream.sh add-repo /path/to/local-clone
+./04-scripts/sync-upstream.sh add-repo /path/to/repo --id my-repo --branch main --skills-path skills
+
+# 列出已注册仓库
+./04-scripts/sync-upstream.sh list-repos
+
+# 检查同步状态（会执行 git fetch）
+./04-scripts/sync-upstream.sh status
+./04-scripts/sync-upstream.sh status --repo baoyu-skills
+
+# 执行同步
+./04-scripts/sync-upstream.sh sync                      # 同步所有仓库
+./04-scripts/sync-upstream.sh sync --repo baoyu-skills  # 仅同步指定仓库
+./04-scripts/sync-upstream.sh sync --dry-run            # 预览变更，不实际修改
+./04-scripts/sync-upstream.sh sync --force              # 分叉时强制重置到上游
+
+# 移除仓库注册
+./04-scripts/sync-upstream.sh remove-repo my-repo
+```
+
+`add-repo` 会自动从 git remote 读取 upstream/origin URL，自动检测 `skillsPath`（`skills` 或 `.`），并回填已有 skill 的 `repoId`。
 
 ## 常见操作
 

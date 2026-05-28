@@ -1,103 +1,80 @@
-# AGENTS.md — Tiga-Skills
+# Tiga-Skills — Agent Capability Library
 
-## General Rules
+Tiga-Skills organizes prompts, agent skills, workflows, and utility scripts into a structured, discoverable collection. It is a pure content repository with no application code, no build system, and no runtime dependencies.
 
-- Communicate with the user in **Simplified Chinese**.
-- Keep technical terms, commands, code, and API names in **English**.
-- Write config files (`CLAUDE.md`, `AGENTS.md`, YAML frontmatter) in **English**.
-- Use **UTF-8** encoding for all files.
+## Repository Structure
 
-## Repository Overview
+| Directory | Role | Purpose |
+|-----------|------|---------|
+| `00-skill-index/` | Index | Unified capability index (derived — partially regenerable) |
+| `01-prompts/` | Content | Reusable prompt templates |
+| `02-agent-skills/` | Content | Agent skills (SKILL.md format), including external imports tracked by `skill-registry.json` |
+| `03-workflows/` | Content | Multi-step workflow definitions |
+| `04-scripts/` | Tooling | Utility scripts for linking, importing, and index syncing |
+| `05-custom-skills/` | Content | User-defined custom skills (isolated from imports) |
+| `agent-plan/` | Scratch | Agent-generated plan files and drafts |
+| `Todo/` | Scratch | Task tracking notes |
 
-Tiga-Skills is an **Agent capability library** that organizes prompts, agent skills, workflows, and utility scripts into a structured, discoverable collection.
+Each content directory has its own `README.md` defining format specifications and conventions.
 
-## Directory Structure
+Directories with additional layer-specific rules in their own `CLAUDE.md`: `00-skill-index/`, `02-agent-skills/`, `05-custom-skills/`.
 
-```
-Tiga-Skills/
-├── 00-skill-index/      # Unified index of all capabilities
-├── 01-prompts/          # Reusable prompt templates
-├── 02-agent-skills/     # Agent skills (SKILL.md format)
-│   └── skills/          # All skills in one directory
-├── 03-workflows/        # Multi-step workflow definitions
-├── 04-scripts/          # Utility scripts
-├── 05-custom-skills/    # User-defined custom skills
-│   └── skills/          # Custom skill directory
-├── agent-plan/          # Agent-generated plan files
-├── AGENTS.md            # Agent behavior guidelines
-├── CLAUDE.md            # Claude Code configuration
-└── README.md            # Project overview (Chinese)
-```
+## Source-of-Truth Rules
 
-## Conventions
+- `01-prompts/` is the primary source for prompt templates.
+- `02-agent-skills/skills/` is the primary source for agent skill definitions. External imports are tracked in `02-agent-skills/skill-registry.json`.
+- `05-custom-skills/skills/` is the primary source for user-defined skills.
+- `03-workflows/` is the primary source for workflow definitions.
+- `04-scripts/` is the primary source for automation scripts.
+- `00-skill-index/README.md` is a derived index — aggregates entries from content directories.
+- `agent-plan/` contains drafts and working notes — not authoritative.
 
-- **File names**: kebab-case (e.g., `my-awesome-skill`)
-- **Encoding**: UTF-8
-- **Content language**: Simplified Chinese for user-facing docs; English for config files (`CLAUDE.md`, `AGENTS.md`, YAML frontmatter)
-- **Markdown**: follow CommonMark spec
+## Working Rules
 
-## Skill Format
+1. Read the target directory's `README.md` and `CLAUDE.md` (if present) before adding or modifying content.
+2. Edit only what the task requires — do not reformat or reorganize adjacent files.
+3. After adding content, update `00-skill-index/README.md` with a new entry.
+4. Do not directly edit skills tracked in `skill-registry.json` — use `04-scripts/manage-skills.sh update`.
+5. Use `04-scripts/link-skills.sh` to manage symlinks to local agent config directories.
+6. Descriptions must accurately reflect content — do not exaggerate capabilities.
+7. Communicate with the user in Simplified Chinese. Keep technical terms, commands, code, and API names in English. Write config files (`CLAUDE.md`, `AGENTS.md`, YAML frontmatter) in English. Use UTF-8 encoding, kebab-case file names, and CommonMark spec for all Markdown.
 
-Each skill lives under `02-agent-skills/skills/{skill-name}/SKILL.md` or `05-custom-skills/skills/{skill-name}/SKILL.md` with YAML frontmatter:
+## Markdown Generation
 
-```yaml
----
-name: skill-name
-description: One-line description of what the skill does
-agents:        # Optional: which agents to link to (default: all)
-  - codex
-  - agents
----
-```
+- Create Markdown files only when explicitly requested.
+- Save generated Markdown under `agent-plan/` unless the user specifies a path.
+- Name generated files as `YYYY-MM-DD_{purpose}.md`.
+- Create `agent-plan/` if it does not exist.
+- Exceptions: translations stay next to the source file; project files (`CLAUDE.md`, `AGENTS.md`, `README.md`, `CHANGELOG.md`) stay at conventional locations.
 
-Followed by the skill body in Markdown.
+## Boundaries
 
-## Adding Content
+**Always:**
+- Read the target directory's `README.md` before modifying its contents.
+- Verify `name` and `description` exist in SKILL.md frontmatter.
+- Update `00-skill-index/README.md` when adding or removing content.
+- Use `link-skills.sh` and `manage-skills.sh` for symlink and import operations.
 
-1. **Prompt** — create `01-prompts/{prompt-name}.md`
-2. **Skill** — create `02-agent-skills/skills/{skill-name}/SKILL.md`
-3. **Custom Skill** — create `05-custom-skills/skills/{skill-name}/SKILL.md`
-4. **Workflow** — create `03-workflows/{workflow-name}.md`
-5. **Script** — add to `04-scripts/` with a brief header comment
-6. **Update index** — add an entry to `00-skill-index/README.md`
+**Ask First:**
+- Creating or deleting skill, prompt, or workflow files.
+- Modifying `skill-registry.json` or imported skill content.
+- Changing directory structure or renaming directories.
+- Running destructive operations (`manage-skills.sh remove`, `link-skills.sh --unlink`).
 
-## Linking Agent Skills
-
-Use `04-scripts/link-skills.sh` to link individual skills into local agent config directories:
-
-```bash
-./04-scripts/link-skills.sh              # Link to all agents
-./04-scripts/link-skills.sh --codex      # Link to ~/.codex/skills only
-./04-scripts/link-skills.sh --unlink     # Remove symlinks
-./04-scripts/link-skills.sh --skill foo  # Process a single skill
-```
-
-The script scans both `02-agent-skills/skills/` and `05-custom-skills/skills/`. Each skill is symlinked individually, preserving existing content in the target directory.
-
-## Importing External Skills
-
-Use `04-scripts/manage-skills.sh` to import skills from external repositories (e.g., `khazix-skills`):
-
-```bash
-./04-scripts/manage-skills.sh import <source-path>
-./04-scripts/manage-skills.sh remove <skill-name>
-./04-scripts/manage-skills.sh list
-./04-scripts/manage-skills.sh status
-./04-scripts/manage-skills.sh update <skill-name>
-```
-
-Imported skills are tracked in `02-agent-skills/skill-registry.json`.
-
-## Quality Standards
-
-- Each skill must have a `name` and `description` in frontmatter.
-- Descriptions should be concise (one line) and actionable.
-- Prompts and workflows should include usage examples where helpful.
-- Scripts must be executable and include error handling.
+**Never:**
+- Fabricate skill descriptions that don't match actual content.
+- Directly edit imported skills — use `manage-skills.sh update`.
+- Delete or overwrite `skill-registry.json` manually.
+- Create symlinks to agent config directories without using `link-skills.sh`.
+- Treat `agent-plan/` content as authoritative.
 
 ## Instruction Priority
 
-1. **User's explicit instructions** — highest priority
-2. **CLAUDE.md** — project-level configuration
-3. **AGENTS.md** (this file) — agent behavior defaults
-4. **Default model behavior** — lowest priority
+When instructions conflict, follow this order:
+
+1. Explicit user instructions
+2. Directory-level `CLAUDE.md` rules for the content being edited
+3. Repository constraints in this file (`AGENTS.md`)
+4. Evidence in source-of-truth directories
+5. Existing style and conventions in source materials
+6. Default model behavior
