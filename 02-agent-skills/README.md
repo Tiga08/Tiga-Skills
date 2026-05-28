@@ -80,6 +80,23 @@ Skill 的详细内容（Markdown 格式）
 
 导入后的 Skill 与原生 Skill 共存于 `skills/` 目录，`link-skills.sh` 会一并链接到本机。
 
+### 上游仓库同步
+
+外部 Skill 通常来自 fork 的 GitHub 仓库。使用 `sync-upstream.sh` 可以从上游仓库拉取更新并自动刷新已导入的 Skill：
+
+```bash
+# 注册上游仓库（仅需一次）
+../04-scripts/sync-upstream.sh add-repo /path/to/local-clone
+
+# 检查上游是否有更新
+../04-scripts/sync-upstream.sh status
+
+# 拉取更新并同步
+../04-scripts/sync-upstream.sh sync
+```
+
+仓库注册信息保存在 `skill-registry.json` 的 `repos` 字段中。同步时使用 `--ff-only` 合并策略，本地分支与上游分叉时需手动解决。
+
 ## 登记
 
 添加新 Skill 后，请在 [00-skill-index](../00-skill-index/README.md) 中登记。

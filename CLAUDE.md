@@ -1,89 +1,39 @@
+@AGENTS.md
+
 # CLAUDE.md — Tiga-Skills
 
-## Repository Overview
+## Architecture Decisions
 
-Tiga-Skills is an **Agent capability library** that organizes prompts, agent skills, workflows, and utility scripts into a structured, discoverable collection.
+**Numbered-prefix directories:** The `00-` through `05-` prefixes enforce a discovery-order layout — index first, then content types by category, then tooling. Agents and humans scanning the repo encounter the index before content, and content before the scripts that operate on it.
 
-## Directory Structure
+**Separate `02-agent-skills` and `05-custom-skills`:** Imported external skills (tracked by `skill-registry.json`) live in `02-agent-skills/`, while user-authored skills live in `05-custom-skills/`. This prevents `manage-skills.sh remove` from accidentally deleting user work, and makes ownership clear at a glance.
 
-```
-Tiga-Skills/
-├── 00-skill-index/      # Unified index of all capabilities
-├── 01-prompts/          # Reusable prompt templates
-├── 02-agent-skills/     # Agent skills (SKILL.md format)
-│   └── skills/          # All skills in one directory
-├── 03-workflows/        # Multi-step workflow definitions
-├── 04-scripts/          # Utility scripts
-├── 05-custom-skills/    # User-defined custom skills
-│   └── skills/          # Custom skill directory
-├── agent-plan/          # Agent-generated plan files
-├── AGENTS.md            # Agent behavior guidelines
-├── CLAUDE.md            # This file
-└── README.md            # Project overview (Chinese)
-```
+**`agent-plan/` as scratch space:** Drafts and plans live outside the content directories. Content is promoted from `agent-plan/` to `01-prompts/`, `02-agent-skills/`, etc. through deliberate action — never automatically.
 
-## Conventions
+**`00-skill-index/` as derived index:** The index aggregates entries from content directories. `sync-index.sh` can regenerate the custom skills section, but standard skills and prompts require manual updates — full automation would require parsing all content formats.
 
-- **File names**: kebab-case (e.g., `my-awesome-skill`)
-- **Encoding**: UTF-8
-- **Content language**: Simplified Chinese for user-facing docs; English for config files (`CLAUDE.md`, `AGENTS.md`, YAML frontmatter)
-- **Markdown**: follow CommonMark spec
+**Per-directory `README.md` as format specs:** Each content directory defines its own file format and conventions in a `README.md`. This keeps format rules close to the content they govern and avoids bloating the root-level governance files.
 
-## Skill Format
+**Subdirectory `CLAUDE.md` for ownership semantics:** `00-skill-index/`, `02-agent-skills/`, and `05-custom-skills/` each have their own `CLAUDE.md` because their read/write rules differ fundamentally from the root-level defaults — derived vs. imported-read-only vs. user-editable. A single root `CLAUDE.md` cannot encode these distinctions without becoming a dispatch table; layer-specific files let each directory state its own constraints directly.
 
-Each skill lives under `02-agent-skills/skills/{skill-name}/SKILL.md` or `05-custom-skills/skills/{skill-name}/SKILL.md` with YAML frontmatter:
+## Common Gotchas
 
-```yaml
----
-name: skill-name
-description: One-line description of what the skill does
-agents:        # Optional: which agents to link to (default: all)
-  - codex
-  - agents
----
-```
+1. **Editing imported skills in place.** Skills in `skill-registry.json` have a `sourceHash`. Editing them directly causes `manage-skills.sh status` to report a mismatch, and `update` will overwrite your changes. Always edit at the external source and re-import.
 
-Followed by the skill body in Markdown.
+2. **Forgetting the index update.** Adding a skill or prompt without updating `00-skill-index/README.md` makes it undiscoverable. `sync-index.sh` only covers custom skills — everything else needs a manual index entry.
 
-## Adding Content
+3. **Treating `agent-plan/` as curated content.** Files there are drafts. If something is worth keeping, promote it to the appropriate content directory — don't reference `agent-plan/` paths as stable locations.
 
-1. **Prompt** — create `01-prompts/{prompt-name}.md`
-2. **Skill** — create `02-agent-skills/skills/{skill-name}/SKILL.md`
-3. **Custom Skill** — create `05-custom-skills/skills/{skill-name}/SKILL.md`
-4. **Workflow** — create `03-workflows/{workflow-name}.md`
-5. **Script** — add to `04-scripts/` with a brief header comment
-6. **Update index** — add an entry to `00-skill-index/README.md`
+4. **Creating symlinks manually.** `link-skills.sh` has specific logic for preserving existing agent config content (e.g., `~/.codex/skills/.system/`). Manual symlinks can conflict with the script and cause silent failures on `--unlink`.
 
-## Linking Agent Skills
+5. **Assuming `CLAUDE.zh.md` auto-updates.** It is a manual Chinese translation of this file. After modifying `CLAUDE.md`, the translation needs a separate update.
 
-Use `04-scripts/link-skills.sh` to link individual skills into local agent config directories:
+6. **Running `sync-upstream.sh sync` without checking status first.** Always run `status` to preview changes. The sync does a `--ff-only` merge in the local clone — if the local branch has diverged, it will fail. Resolve manually before re-running.
 
-```bash
-./04-scripts/link-skills.sh              # Link to all agents
-./04-scripts/link-skills.sh --codex      # Link to ~/.codex/skills only
-./04-scripts/link-skills.sh --unlink     # Remove symlinks
-./04-scripts/link-skills.sh --skill foo  # Process a single skill
-```
+## Agent Collaboration Rules
 
-The script scans both `02-agent-skills/skills/` and `05-custom-skills/skills/`. Each skill is symlinked individually, preserving existing content in the target directory.
-
-## Importing External Skills
-
-Use `04-scripts/manage-skills.sh` to import skills from external repositories (e.g., `khazix-skills`):
-
-```bash
-./04-scripts/manage-skills.sh import <source-path>
-./04-scripts/manage-skills.sh remove <skill-name>
-./04-scripts/manage-skills.sh list
-./04-scripts/manage-skills.sh status
-./04-scripts/manage-skills.sh update <skill-name>
-```
-
-Imported skills are tracked in `02-agent-skills/skill-registry.json`.
-
-## Quality Standards
-
-- Each skill must have a `name` and `description` in frontmatter.
-- Descriptions should be concise (one line) and actionable.
-- Prompts and workflows should include usage examples where helpful.
-- Scripts must be executable and include error handling.
+1. **Plan mode for structural changes.** Tasks that add, remove, or reorganize directories, or modify governance files (`AGENTS.md`, `CLAUDE.md`, root `README.md`), must use plan mode first.
+2. **Read directory READMEs before writing.** Each content directory has a `README.md` that is the authoritative format specification. Do not rely on memory or root-level summaries.
+3. **Drafts go to `agent-plan/`.** Generated plans, analysis, or intermediate content goes to `agent-plan/`. Promote to a content directory only with user approval.
+4. **Index updates are part of the task.** Adding content without updating `00-skill-index/README.md` is an incomplete task.
+5. **Read subdirectory `CLAUDE.md` before operating on its files.** When a content directory has its own `CLAUDE.md`, read it before any read or write operation. Subdirectory rules take precedence over root-level rules for content in that directory.

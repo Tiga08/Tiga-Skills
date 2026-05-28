@@ -1,5 +1,34 @@
 {
   "version": 2,
+  "repos": {
+    "baoyu-skills": {
+      "localPath": "/Users/bruce/Projects/AG-Tools/baoyu-skills",
+      "upstreamUrl": "git@github.com:JimLiu/baoyu-skills.git",
+      "originUrl": "git@github.com:Tiga08/baoyu-skills.git",
+      "branch": "main",
+      "skillsPath": "skills",
+      "lastSyncedAt": "2026-05-27T13:58:29+00:00",
+      "lastSyncedCommit": "e1c0ff7"
+    },
+    "khazix-skills": {
+      "localPath": "/Users/bruce/Projects/AG-Tools/khazix-skills",
+      "upstreamUrl": "git@github.com:KKKKhazix/khazix-skills.git",
+      "originUrl": "git@github.com:Tiga08/khazix-skills.git",
+      "branch": "main",
+      "skillsPath": ".",
+      "lastSyncedAt": null,
+      "lastSyncedCommit": null
+    },
+    "superpowers": {
+      "localPath": "/Users/bruce/Projects/AG-Tools/superpowers",
+      "upstreamUrl": "git@github.com:obra/superpowers.git",
+      "originUrl": "git@github.com:Tiga08/superpowers.git",
+      "branch": "main",
+      "skillsPath": "skills",
+      "lastSyncedAt": null,
+      "lastSyncedCommit": null
+    }
+  },
   "skills": [
     {
       "name": "baoyu-format-markdown",
@@ -7,7 +36,8 @@
       "importedAt": "2026-05-15T08:58:44+00:00",
       "updatedAt": "2026-05-15T09:18:25+00:00",
       "sourceHash": "0a999079",
-      "description": "格式化纯文本或 Markdown 文件，自动添加 frontmatter、标题、摘要、层级标题、粗体、列表和代码块"
+      "description": "格式化纯文本或 Markdown 文件，自动添加 frontmatter、标题、摘要、层级标题、粗体、列表和代码块",
+      "repoId": "baoyu-skills"
     },
     {
       "name": "baoyu-url-to-markdown",
@@ -15,15 +45,17 @@
       "importedAt": "2026-05-15T08:59:18+00:00",
       "updatedAt": "2026-05-15T08:59:18+00:00",
       "sourceHash": "bb46e168",
-      "description": "通过 baoyu-fetch CLI（Chrome CDP + 站点适配器）抓取任意 URL 并转换为 Markdown，内置 X/Twitter、YouTube 字幕、Hacker News 等适配器"
+      "description": "通过 baoyu-fetch CLI（Chrome CDP + 站点适配器）抓取任意 URL 并转换为 Markdown，内置 X/Twitter、YouTube 字幕、Hacker News 等适配器",
+      "repoId": "baoyu-skills"
     },
     {
       "name": "baoyu-markdown-to-html",
       "source": "/Users/bruce/Projects/AG-Tools/baoyu-skills/skills/baoyu-markdown-to-html",
       "importedAt": "2026-05-15T09:17:06+00:00",
-      "updatedAt": "2026-05-15T09:17:27+00:00",
-      "sourceHash": "b65418a1",
-      "description": "将 Markdown 转换为带样式的 HTML，支持微信兼容主题、代码高亮、数学公式、PlantUML、脚注、提示框和外链转底部引用"
+      "updatedAt": "2026-05-27T13:58:29+00:00",
+      "sourceHash": "e5564a5b",
+      "description": "将 Markdown 转换为带样式的 HTML，支持微信兼容主题、代码高亮、数学公式、PlantUML、脚注、提示框和外链转底部引用",
+      "repoId": "baoyu-skills"
     }
   ]
 }

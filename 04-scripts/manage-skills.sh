@@ -93,41 +93,99 @@ update_skill_index() {
     return 0
   fi
 
-  if grep -q "| $skill_name |" "$SKILL_INDEX" 2>/dev/null; then
-    return 0
-  fi
-
   if [ -z "$description" ]; then
     description="(no description)"
   fi
 
-  description="$(echo "$description" | sed 's/|/\\|/g')"
-
-  local index_line="| $skill_name | $description |"
-
   python3 -c "
-import sys
+import json, sys, re
+
 index_file = sys.argv[1]
-new_line = sys.argv[2]
+skill_name = sys.argv[2]
+description = sys.argv[3].replace('|', r'\|')
+registry_file = sys.argv[4]
+
+# --- 从 registry 解析上游仓库链接 ---
+upstream_col = ''
+try:
+    with open(registry_file) as f:
+        reg = json.load(f)
+    for s in reg.get('skills', []):
+        if s['name'] == skill_name:
+            repo_id = s.get('repoId', '')
+            if repo_id:
+                url = reg.get('repos', {}).get(repo_id, {}).get('upstreamUrl', '')
+                # git@github.com:Org/Repo.git -> [Org/Repo](https://github.com/Org/Repo)
+                m = re.match(r'git@github\.com:(.+?)(?:\.git)?$', url)
+                if m:
+                    slug = m.group(1)
+                    upstream_col = f'[{slug}](https://github.com/{slug})'
+            break
+except Exception:
+    pass
+
+new_entry = (skill_name, description, upstream_col)
+
+# --- 读取索引文件 ---
 with open(index_file) as f:
     lines = f.readlines()
-insert_pos = None
-in_agent_skills = False
+
+# --- 找到 Agent Skills 区域，收集现有行 ---
+section_start = None
+header_end = None
+section_end = None
+existing = {}  # name -> (description, upstream)
+
 for i, line in enumerate(lines):
-    if line.strip() == '## Agent Skills':
-        in_agent_skills = True
-    elif in_agent_skills and line.startswith('## '):
-        if insert_pos is None:
-            insert_pos = i
-        break
-    elif in_agent_skills and line.startswith('|') and not line.startswith('| 名称') and not line.startswith('|--'):
-        insert_pos = i + 1
-if insert_pos is None:
-    insert_pos = len(lines)
-lines.insert(insert_pos, new_line + '\n')
+    stripped = line.strip()
+    if stripped == '## Agent Skills':
+        section_start = i
+    elif section_start is not None and header_end is None:
+        if stripped.startswith('|--'):
+            header_end = i + 1
+    elif header_end is not None and section_end is None:
+        if stripped.startswith('## ') or stripped == '':
+            section_end = i
+            break
+        if stripped.startswith('|'):
+            parts = [p.strip() for p in stripped.split('|')]
+            # parts: ['', name, desc, upstream?, '']
+            if len(parts) >= 4:
+                ename = parts[1]
+                edesc = parts[2]
+                eupstream = parts[3] if len(parts) >= 5 else ''
+                existing[ename] = (edesc, eupstream)
+
+if section_start is None or header_end is None:
+    sys.exit(0)
+
+if section_end is None:
+    section_end = len(lines)
+
+# --- 加入/更新条目 ---
+existing[new_entry[0]] = (new_entry[1], new_entry[2])
+
+# --- 按名称排序，生成 3 列表格 ---
+sorted_names = sorted(existing.keys())
+new_rows = []
+for name in sorted_names:
+    desc, upstream = existing[name]
+    new_rows.append(f'| {name} | {desc} | {upstream} |\n')
+
+# --- 重写 Agent Skills 区域 ---
+header = [
+    '| 名称 | 说明 | 上游仓库 |\n',
+    '|------|------|----------|\n',
+]
+result = lines[:section_start + 1]  # 包含 ## Agent Skills
+result.append('\n')
+result.extend(header)
+result.extend(new_rows)
+result.extend(lines[section_end:])
+
 with open(index_file, 'w') as f:
-    f.writelines(lines)
-" "$SKILL_INDEX" "$index_line"
+    f.writelines(result)
+" "$SKILL_INDEX" "$skill_name" "$description" "$REGISTRY"
 
   echo -e "${CYAN}Updated skill index: $skill_name${NC}"
 }
@@ -247,14 +305,20 @@ if data.get('version', 1) == 1:
     data['version'] = 2
     for s in data.get('skills', []):
         s.pop('agent', None)
-data['skills'].append({
+entry = {
     'name': sys.argv[2],
     'source': sys.argv[3],
     'importedAt': sys.argv[4],
     'updatedAt': sys.argv[4],
     'sourceHash': sys.argv[5],
     'description': sys.argv[6]
-})
+}
+source = sys.argv[3]
+for rid, rinfo in data.get('repos', {}).items():
+    if source.startswith(rinfo.get('localPath', '') + '/'):
+        entry['repoId'] = rid
+        break
+data['skills'].append(entry)
 with open(sys.argv[1], 'w') as f:
     json.dump(data, f, indent=2, ensure_ascii=False)
     f.write('\n')
@@ -443,7 +507,6 @@ with open(sys.argv[1], 'w') as f:
     f.write('\n')
 " "$REGISTRY" "$skill_name" "$now" "$source_hash" "$description"
 
-  remove_from_skill_index "$skill_name"
   update_skill_index "$skill_name" "$description"
 
   echo -e "${GREEN}Updated: $skill_name${NC}"
