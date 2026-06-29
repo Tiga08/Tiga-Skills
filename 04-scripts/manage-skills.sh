@@ -186,7 +186,8 @@ cmd_list() {
     local resolved
     resolved="$(cd "$SKILLS_DIR" && cd "$target" 2>/dev/null && pwd)" || resolved=""
     if [ -n "$resolved" ] && [ -f "$resolved/SKILL.md" ]; then
-      desc="$(extract_field "$resolved/SKILL.md" "description")"
+      desc="$(extract_field "$resolved/SKILL.md" "description_zh")"
+      [ -z "$desc" ] && desc="$(extract_field "$resolved/SKILL.md" "description")"
     fi
 
     printf "%-30s %-12s %s\n" "$name" "$source" "$desc"
@@ -212,8 +213,8 @@ cmd_update_readme() {
 
   # 生成表格内容到临时文件
   {
-    echo "| Name | Source | Description |"
-    echo "| ---- | ------ | ----------- |"
+    echo "| 名称 | 来源 | 描述 |"
+    echo "| ---- | ---- | ---- |"
 
     for link in "$SKILLS_DIR"/*/; do
       [ -L "${link%/}" ] || continue
@@ -228,7 +229,8 @@ cmd_update_readme() {
       local resolved
       resolved="$(cd "$SKILLS_DIR" && cd "$target" 2>/dev/null && pwd)" || resolved=""
       if [ -n "$resolved" ] && [ -f "$resolved/SKILL.md" ]; then
-        desc="$(extract_field "$resolved/SKILL.md" "description")"
+        desc="$(extract_field "$resolved/SKILL.md" "description_zh")"
+        [ -z "$desc" ] && desc="$(extract_field "$resolved/SKILL.md" "description")"
       fi
 
       echo "| $name | $source | $desc |"

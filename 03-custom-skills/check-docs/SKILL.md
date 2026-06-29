@@ -1,6 +1,7 @@
 ---
 name: check-docs
 description: Check whether governance documents (README.md, CLAUDE.md, AGENTS.md) are up-to-date with actual repository state
+description_zh: 检查治理文档（README.md、CLAUDE.md、AGENTS.md）是否与仓库实际状态一致
 ---
 
 Check whether governance documents are consistent with the actual repository state, and report actionable findings.

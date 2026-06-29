@@ -1,6 +1,7 @@
 ---
 name: md-to-zh
 description: Translate English Markdown files into Simplified Chinese
+description_zh: 将英文 Markdown 文件翻译为简体中文
 ---
 
 Translate English Markdown files into Simplified Chinese.

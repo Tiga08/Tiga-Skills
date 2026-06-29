@@ -53,10 +53,11 @@ Tiga-Skills/
 
 <!-- BEGIN SKILL LIST -->
 
-| Name | Source | Description |
-| ---- | ------ | ----------- |
+| 名称 | 来源 | 描述 |
+| ---- | ---- | ---- |
 | check-docs | custom | 检查治理文档（README.md、CLAUDE.md、AGENTS.md）是否与仓库实际状态一致 |
-| gen-governance | custom | 分析仓库并生成 AGENTS.md / CLAUDE.md 治理文件，供 AI Agent 正确操作项目 |
+| draft-commit | custom | 分析所有待提交的 git 变更，生成可直接使用的 commit 命令（不执行） |
+| gen-governance | custom | 分析仓库结构并生成 AGENTS.md / CLAUDE.md 治理文件 |
 | md-to-zh | custom | 将英文 Markdown 文件翻译为简体中文 |
 
 <!-- END SKILL LIST -->
@@ -72,6 +73,7 @@ Tiga-Skills/
 位于 `03-custom-skills/` 中，通过 `add-custom` 命令注册：
 
 - **check-docs** — 检查治理文档是否与仓库实际状态一致
+- **draft-commit** — 分析所有待提交的 git 变更，生成可直接使用的 commit 命令
 - **gen-governance** — 分析仓库并生成 AGENTS.md / CLAUDE.md 治理文件
 - **md-to-zh** — 将英文 Markdown 文件翻译为简体中文
 

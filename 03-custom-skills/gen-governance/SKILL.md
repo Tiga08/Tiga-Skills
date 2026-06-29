@@ -1,6 +1,7 @@
 ---
 name: gen-governance
 description: Analyze a repository and generate AGENTS.md / CLAUDE.md governance files for AI agent operation
+description_zh: 分析仓库结构并生成 AGENTS.md / CLAUDE.md 治理文件
 ---
 
 Analyze the current repository and generate governance files (`AGENTS.md` and `CLAUDE.md`) so that AI agents can understand and operate correctly within the project.
