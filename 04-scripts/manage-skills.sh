@@ -1,536 +1,285 @@
 #!/usr/bin/env bash
-# 用途：管理外部 Skill 的导入、移除、查询和更新
-# 用法：manage-skills.sh <import|remove|list|status|update> [参数]
+# 技能管理脚本 — 管理 02-agent-skills/ 中的软链接并更新 README.md
 
 set -euo pipefail
 
-# --- 颜色 ---
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[0;33m'
-CYAN='\033[0;36m'
-NC='\033[0m'
-
-# --- 路径 ---
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-SKILLS_DIR="$REPO_ROOT/02-agent-skills/skills"
-REGISTRY="$REPO_ROOT/02-agent-skills/skill-registry.json"
-SKILL_INDEX="$REPO_ROOT/00-skill-index/README.md"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+SKILLS_DIR="$PROJECT_ROOT/02-agent-skills"
+CUSTOM_DIR="$PROJECT_ROOT/03-custom-skills"
+README="$PROJECT_ROOT/README.md"
 
-usage() {
-  cat <<EOF
-Usage: $(basename "$0") <command> [options]
+# ── 辅助函数 ──
 
-Commands:
-  import [--description "说明"] <source-path>
-                           Import a skill from an external path
-  remove <skill-name>      Remove an imported skill
-  list                     List all imported skills
-  status                   Check for upstream changes
-  update [--description "说明"] <skill-name>
-                           Update an imported skill from source
+die() { echo "错误: $1" >&2; exit 1; }
 
-Examples:
-  $(basename "$0") import /path/to/khazix-skills/skills/my-skill
-  $(basename "$0") import --description "将 Markdown 转为 HTML" /path/to/skills/md-to-html
-  $(basename "$0") remove my-skill
-  $(basename "$0") list
-  $(basename "$0") status
-  $(basename "$0") update my-skill
-EOF
+# 从 SKILL.md frontmatter 提取字段值
+extract_field() {
+  local file="$1" field="$2"
+  sed -n '/^---$/,/^---$/p' "$file" | sed -n "s/^${field}: *//p" | head -1
 }
 
-ensure_registry() {
-  if [ ! -f "$REGISTRY" ]; then
-    printf '{\n  "version": 2,\n  "skills": []\n}\n' > "$REGISTRY"
+# 判断技能来源类别
+classify_source() {
+  local target="$1"
+  if [[ "$target" == *"/AG-Tools/"* ]]; then
+    echo "$target" | sed -n 's|.*/AG-Tools/\([^/]*\)/.*|\1|p'
+  elif [[ "$target" == *"03-custom-skills/"* ]] || [[ "$target" == "../03-custom-skills/"* ]]; then
+    echo "custom"
+  else
+    echo "external"
   fi
 }
 
-compute_hash() {
-  local dir="$1"
-  find "$dir" -type f | sort | xargs shasum 2>/dev/null | shasum | cut -c1-8
-}
+# ── setup ──
 
-find_in_registry() {
-  local name="$1"
-  python3 -c "
-import json, sys
-with open(sys.argv[1]) as f:
-    data = json.load(f)
-entries = [s for s in data['skills'] if s['name'] == sys.argv[2]]
-if entries:
-    print(json.dumps(entries[0]))
-else:
-    sys.exit(1)
-" "$REGISTRY" "$name"
-}
+cmd_setup() {
+  local target="$SKILLS_DIR"
 
-extract_english_description() {
-  local skill_md="$1"
-  python3 -c "
-import sys, re
-with open(sys.argv[1]) as f:
-    text = f.read()
-desc = ''
-m = re.search(r'^---\s*\n(.*?)\n---', text, re.DOTALL)
-if m:
-    dm = re.search(r'^description:\s*(.+)', m.group(1), re.MULTILINE)
-    if dm:
-        val = dm.group(1).strip()
-        if len(val) >= 2 and val[0] == val[-1] and val[0] in ('\"', \"'\"):
-            val = val[1:-1]
-        desc = val
-print(desc)
-" "$skill_md"
-}
+  # ── Claude: ~/.claude/skills 整个目录作为软链接 ──
+  local claude_link="$HOME/.claude/skills"
 
-update_skill_index() {
-  local skill_name="$1"
-  local description="$2"
-
-  if [ ! -f "$SKILL_INDEX" ]; then
-    return 0
+  if [ -L "$claude_link" ]; then
+    local existing
+    existing="$(readlink "$claude_link")"
+    if [ "$existing" = "$target" ]; then
+      echo "✓ $claude_link 已指向正确目标"
+    else
+      echo "⚠ $claude_link 当前指向 $existing"
+      echo "  期望目标: $target"
+      read -r -p "  是否更新？[y/N] " answer
+      if [[ "$answer" =~ ^[Yy]$ ]]; then
+        rm "$claude_link"
+        ln -s "$target" "$claude_link"
+        echo "✓ 已更新 $claude_link -> $target"
+      else
+        echo "  跳过"
+      fi
+    fi
+  elif [ -d "$claude_link" ]; then
+    echo "⚠ $claude_link 是一个真实目录"
+    echo "  需要替换为指向 $target 的软链接"
+    read -r -p "  是否删除该目录并创建软链接？[y/N] " answer
+    if [[ "$answer" =~ ^[Yy]$ ]]; then
+      rm -rf "$claude_link"
+      ln -s "$target" "$claude_link"
+      echo "✓ 已替换 $claude_link -> $target"
+    else
+      echo "  跳过"
+    fi
+  elif [ -e "$claude_link" ]; then
+    die "$claude_link 已存在且不是软链接或目录，请手动处理"
+  else
+    mkdir -p "$HOME/.claude"
+    ln -s "$target" "$claude_link"
+    echo "✓ 已创建 $claude_link -> $target"
   fi
 
-  if [ -z "$description" ]; then
-    description="(no description)"
+  # ── Codex: ~/.codex/skills/tiga-skills 子链接（保持原有逻辑） ──
+  local codex_dir="$HOME/.codex/skills"
+  local codex_link="$codex_dir/tiga-skills"
+  mkdir -p "$codex_dir"
+
+  if [ -L "$codex_link" ]; then
+    local existing
+    existing="$(readlink "$codex_link")"
+    if [ "$existing" = "$target" ]; then
+      echo "✓ $codex_link 已指向正确目标"
+    else
+      echo "⚠ $codex_link 当前指向 $existing"
+      echo "  期望目标: $target"
+      read -r -p "  是否更新？[y/N] " answer
+      if [[ "$answer" =~ ^[Yy]$ ]]; then
+        rm "$codex_link"
+        ln -s "$target" "$codex_link"
+        echo "✓ 已更新 $codex_link -> $target"
+      else
+        echo "  跳过"
+      fi
+    fi
+  elif [ -e "$codex_link" ]; then
+    die "$codex_link 已存在且不是软链接，请手动处理"
+  else
+    ln -s "$target" "$codex_link"
+    echo "✓ 已创建 $codex_link -> $target"
   fi
-
-  python3 -c "
-import json, sys, re
-
-index_file = sys.argv[1]
-skill_name = sys.argv[2]
-description = sys.argv[3].replace('|', r'\|')
-registry_file = sys.argv[4]
-
-# --- 从 registry 解析上游仓库链接 ---
-upstream_col = ''
-try:
-    with open(registry_file) as f:
-        reg = json.load(f)
-    for s in reg.get('skills', []):
-        if s['name'] == skill_name:
-            repo_id = s.get('repoId', '')
-            if repo_id:
-                url = reg.get('repos', {}).get(repo_id, {}).get('upstreamUrl', '')
-                # git@github.com:Org/Repo.git -> [Org/Repo](https://github.com/Org/Repo)
-                m = re.match(r'git@github\.com:(.+?)(?:\.git)?$', url)
-                if m:
-                    slug = m.group(1)
-                    upstream_col = f'[{slug}](https://github.com/{slug})'
-            break
-except Exception:
-    pass
-
-new_entry = (skill_name, description, upstream_col)
-
-# --- 读取索引文件 ---
-with open(index_file) as f:
-    lines = f.readlines()
-
-# --- 找到 Agent Skills 区域，收集现有行 ---
-section_start = None
-header_end = None
-section_end = None
-existing = {}  # name -> (description, upstream)
-
-for i, line in enumerate(lines):
-    stripped = line.strip()
-    if stripped == '## Agent Skills':
-        section_start = i
-    elif section_start is not None and header_end is None:
-        if stripped.startswith('|--'):
-            header_end = i + 1
-    elif header_end is not None and section_end is None:
-        if stripped.startswith('## ') or stripped == '':
-            section_end = i
-            break
-        if stripped.startswith('|'):
-            parts = [p.strip() for p in stripped.split('|')]
-            # parts: ['', name, desc, upstream?, '']
-            if len(parts) >= 4:
-                ename = parts[1]
-                edesc = parts[2]
-                eupstream = parts[3] if len(parts) >= 5 else ''
-                existing[ename] = (edesc, eupstream)
-
-if section_start is None or header_end is None:
-    sys.exit(0)
-
-if section_end is None:
-    section_end = len(lines)
-
-# --- 加入/更新条目 ---
-existing[new_entry[0]] = (new_entry[1], new_entry[2])
-
-# --- 按名称排序，生成 3 列表格 ---
-sorted_names = sorted(existing.keys())
-new_rows = []
-for name in sorted_names:
-    desc, upstream = existing[name]
-    new_rows.append(f'| {name} | {desc} | {upstream} |\n')
-
-# --- 重写 Agent Skills 区域 ---
-header = [
-    '| 名称 | 说明 | 上游仓库 |\n',
-    '|------|------|----------|\n',
-]
-result = lines[:section_start + 1]  # 包含 ## Agent Skills
-result.append('\n')
-result.extend(header)
-result.extend(new_rows)
-result.extend(lines[section_end:])
-
-with open(index_file, 'w') as f:
-    f.writelines(result)
-" "$SKILL_INDEX" "$skill_name" "$description" "$REGISTRY"
-
-  echo -e "${CYAN}Updated skill index: $skill_name${NC}"
 }
 
-remove_from_skill_index() {
-  local skill_name="$1"
+# ── add ──
 
-  if [ ! -f "$SKILL_INDEX" ]; then
-    return 0
-  fi
+cmd_add() {
+  local source_path="" name=""
 
-  if ! grep -q "| $skill_name |" "$SKILL_INDEX" 2>/dev/null; then
-    return 0
-  fi
-
-  python3 -c "
-import sys
-with open(sys.argv[1]) as f:
-    lines = f.readlines()
-with open(sys.argv[1], 'w') as f:
-    for line in lines:
-        if not line.strip().startswith('| ' + sys.argv[2] + ' |'):
-            f.write(line)
-" "$SKILL_INDEX" "$skill_name"
-
-  echo -e "${CYAN}Removed from skill index: $skill_name${NC}"
-}
-
-# --- import ---
-cmd_import() {
-  local user_description=""
-  local source_path=""
-
-  while [ $# -gt 0 ]; do
+  while [[ $# -gt 0 ]]; do
     case "$1" in
-      --description)
-        user_description="${2:-}"
-        shift 2
-        ;;
-      *)
-        source_path="$1"
-        shift
-        ;;
+      --name) name="$2"; shift 2 ;;
+      *) source_path="$1"; shift ;;
     esac
   done
 
-  if [ -z "$source_path" ]; then
-    echo -e "${RED}Error: source path is required${NC}" >&2
-    echo "Usage: $(basename "$0") import [--description \"说明\"] <source-path>" >&2
-    exit 1
+  [ -z "$source_path" ] && die "用法: $0 add <source-path> [--name <name>]"
+
+  # 展开 ~ 并转为绝对路径
+  source_path="${source_path/#\~/$HOME}"
+  source_path="$(cd "$source_path" 2>/dev/null && pwd)" || die "路径不存在: $source_path"
+
+  [ -f "$source_path/SKILL.md" ] || die "未找到 SKILL.md: $source_path/SKILL.md"
+
+  [ -z "$name" ] && name="$(basename "$source_path")"
+
+  local link="$SKILLS_DIR/$name"
+  [ -e "$link" ] && die "技能 '$name' 已存在于 02-agent-skills/"
+
+  ln -s "$source_path" "$link"
+  echo "✓ 已添加 $name -> $source_path"
+  cmd_update_readme
+}
+
+# ── add-custom ──
+
+cmd_add_custom() {
+  local name="$1"
+  [ -z "$name" ] && die "用法: $0 add-custom <name>"
+  [ -d "$CUSTOM_DIR/$name" ] || die "自定义技能不存在: 03-custom-skills/$name"
+
+  local link="$SKILLS_DIR/$name"
+  [ -e "$link" ] && die "技能 '$name' 已存在于 02-agent-skills/"
+
+  ln -s "../03-custom-skills/$name" "$link"
+  echo "✓ 已添加 $name -> ../03-custom-skills/$name"
+  cmd_update_readme
+}
+
+# ── remove ──
+
+cmd_remove() {
+  local name="$1"
+  [ -z "$name" ] && die "用法: $0 remove <name>"
+
+  local link="$SKILLS_DIR/$name"
+  [ -L "$link" ] || die "'$name' 不是软链接或不存在，拒绝删除"
+
+  rm "$link"
+  echo "✓ 已移除 $name"
+  cmd_update_readme
+}
+
+# ── list ──
+
+cmd_list() {
+  echo "已注册技能:"
+  echo "─────────────────────────────────────────────────────"
+  printf "%-30s %-12s %s\n" "名称" "来源" "描述"
+  echo "─────────────────────────────────────────────────────"
+
+  local count=0
+  for link in "$SKILLS_DIR"/*/; do
+    [ -L "${link%/}" ] || continue
+    local name
+    name="$(basename "${link%/}")"
+    local target
+    target="$(readlink "${link%/}")"
+    local source
+    source="$(classify_source "$target")"
+
+    local desc=""
+    local resolved
+    resolved="$(cd "$SKILLS_DIR" && cd "$target" 2>/dev/null && pwd)" || resolved=""
+    if [ -n "$resolved" ] && [ -f "$resolved/SKILL.md" ]; then
+      desc="$(extract_field "$resolved/SKILL.md" "description_zh")"
+      [ -z "$desc" ] && desc="$(extract_field "$resolved/SKILL.md" "description")"
+    fi
+
+    printf "%-30s %-12s %s\n" "$name" "$source" "$desc"
+    count=$((count + 1))
+  done
+
+  if [ "$count" -eq 0 ]; then
+    echo "(无)"
   fi
+  echo ""
+  echo "共 $count 个技能"
+}
 
-  source_path="$(cd "$source_path" && pwd)" 2>/dev/null || {
-    echo -e "${RED}Error: source path does not exist: $source_path${NC}" >&2
-    exit 1
-  }
+# ── update-readme ──
 
-  if [ ! -f "$source_path/SKILL.md" ]; then
-    echo -e "${RED}Error: SKILL.md not found in $source_path${NC}" >&2
-    exit 1
-  fi
+cmd_update_readme() {
+  [ -f "$README" ] || die "README.md 不存在"
 
-  local skill_name
-  skill_name="$(basename "$source_path")"
-  local target_dir="$SKILLS_DIR/$skill_name"
+  local tmpfile
+  tmpfile="$(mktemp)"
+  local tablefile
+  tablefile="$(mktemp)"
 
-  ensure_registry
-  mkdir -p "$SKILLS_DIR"
+  # 生成表格内容到临时文件
+  {
+    echo "| 名称 | 来源 | 描述 |"
+    echo "| ---- | ---- | ---- |"
 
-  if [ -d "$target_dir" ]; then
-    if find_in_registry "$skill_name" >/dev/null 2>&1; then
-      local current_hash
-      current_hash="$(compute_hash "$source_path")"
-      local local_hash
-      local_hash="$(compute_hash "$target_dir")"
+    for link in "$SKILLS_DIR"/*/; do
+      [ -L "${link%/}" ] || continue
+      local name
+      name="$(basename "${link%/}")"
+      local target
+      target="$(readlink "${link%/}")"
+      local source
+      source="$(classify_source "$target")"
 
-      if [ "$current_hash" = "$local_hash" ]; then
-        echo -e "${GREEN}Already up-to-date: $skill_name${NC}"
-        return 0
+      local desc=""
+      local resolved
+      resolved="$(cd "$SKILLS_DIR" && cd "$target" 2>/dev/null && pwd)" || resolved=""
+      if [ -n "$resolved" ] && [ -f "$resolved/SKILL.md" ]; then
+        desc="$(extract_field "$resolved/SKILL.md" "description_zh")"
+        [ -z "$desc" ] && desc="$(extract_field "$resolved/SKILL.md" "description")"
       fi
 
-      echo -e "${YELLOW}Skill already imported. Use 'update' to refresh.${NC}"
-      return 1
-    else
-      echo -e "${RED}Error: $skill_name already exists but is not an imported skill.${NC}" >&2
-      exit 1
-    fi
-  fi
+      echo "| $name | $source | $desc |"
+    done
+  } > "$tablefile"
 
-  local en_desc
-  en_desc="$(extract_english_description "$source_path/SKILL.md")"
+  # 替换标记区域
+  awk -v tfile="$tablefile" '
+    /<!-- BEGIN SKILL LIST -->/ {
+      print
+      print ""
+      while ((getline line < tfile) > 0) print line
+      close(tfile)
+      print ""
+      skip=1
+      next
+    }
+    /<!-- END SKILL LIST -->/ { skip=0 }
+    skip { next }
+    { print }
+  ' "$README" > "$tmpfile"
 
-  local description="$user_description"
-  if [ -z "$description" ]; then
-    if [ -t 0 ]; then
-      echo -e "${CYAN}English description: ${en_desc:-（无）}${NC}"
-      printf "请输入中文说明（回车跳过使用英文）: "
-      read -r description
-    fi
-  fi
-  if [ -z "$description" ]; then
-    description="$en_desc"
-  fi
-
-  cp -R "$source_path" "$target_dir"
-
-  local source_hash
-  source_hash="$(compute_hash "$source_path")"
-  local now
-  now="$(date -u +%Y-%m-%dT%H:%M:%S+00:00)"
-
-  python3 -c "
-import json, sys
-with open(sys.argv[1]) as f:
-    data = json.load(f)
-if data.get('version', 1) == 1:
-    data['version'] = 2
-    for s in data.get('skills', []):
-        s.pop('agent', None)
-entry = {
-    'name': sys.argv[2],
-    'source': sys.argv[3],
-    'importedAt': sys.argv[4],
-    'updatedAt': sys.argv[4],
-    'sourceHash': sys.argv[5],
-    'description': sys.argv[6]
-}
-source = sys.argv[3]
-for rid, rinfo in data.get('repos', {}).items():
-    if source.startswith(rinfo.get('localPath', '') + '/'):
-        entry['repoId'] = rid
-        break
-data['skills'].append(entry)
-with open(sys.argv[1], 'w') as f:
-    json.dump(data, f, indent=2, ensure_ascii=False)
-    f.write('\n')
-" "$REGISTRY" "$skill_name" "$source_path" "$now" "$source_hash" "$description"
-
-  update_skill_index "$skill_name" "$description"
-
-  echo -e "${GREEN}Imported: $skill_name -> $target_dir${NC}"
+  mv "$tmpfile" "$README"
+  rm -f "$tablefile"
+  echo "✓ README.md 技能清单已更新"
 }
 
-# --- remove ---
-cmd_remove() {
-  local skill_name="${1:-}"
+# ── 主入口 ──
 
-  if [ -z "$skill_name" ]; then
-    echo -e "${RED}Error: skill name is required${NC}" >&2
-    echo "Usage: $(basename "$0") remove <skill-name>" >&2
-    exit 1
-  fi
+cmd="${1:-}"
+shift || true
 
-  ensure_registry
-
-  if ! find_in_registry "$skill_name" >/dev/null 2>&1; then
-    echo -e "${RED}Error: $skill_name is not an imported skill${NC}" >&2
-    exit 1
-  fi
-
-  local target_dir="$SKILLS_DIR/$skill_name"
-
-  if [ -d "$target_dir" ]; then
-    rm -rf "$target_dir"
-  fi
-
-  python3 -c "
-import json, sys
-with open(sys.argv[1]) as f:
-    data = json.load(f)
-data['skills'] = [s for s in data['skills'] if s['name'] != sys.argv[2]]
-with open(sys.argv[1], 'w') as f:
-    json.dump(data, f, indent=2, ensure_ascii=False)
-    f.write('\n')
-" "$REGISTRY" "$skill_name"
-
-  remove_from_skill_index "$skill_name"
-
-  echo -e "${GREEN}Removed: $skill_name${NC}"
-}
-
-# --- list ---
-cmd_list() {
-  ensure_registry
-
-  python3 -c "
-import json, sys
-with open(sys.argv[1]) as f:
-    data = json.load(f)
-skills = data['skills']
-if not skills:
-    print('No imported skills.')
-else:
-    for s in skills:
-        print(f\"  {s['name']:30s} {s['source']}\")
-" "$REGISTRY"
-}
-
-# --- status ---
-cmd_status() {
-  ensure_registry
-
-  python3 -c "
-import json, subprocess, os, sys
-
-with open(sys.argv[1]) as f:
-    data = json.load(f)
-
-skills = data['skills']
-if not skills:
-    print('No imported skills.')
-    sys.exit(0)
-
-for s in skills:
-    source = s['source']
-    name = s['name']
-    old_hash = s.get('sourceHash', '')
-
-    if not os.path.isdir(source):
-        print(f'  \033[0;33m{name:30s} source missing: {source}\033[0m')
-        continue
-
-    result = subprocess.run(
-        ['bash', '-c', f\"find '{source}' -type f | sort | xargs shasum 2>/dev/null | shasum\"],
-        capture_output=True, text=True
-    )
-    new_hash = result.stdout.strip()[:8] if result.returncode == 0 else '?'
-
-    if new_hash == old_hash:
-        print(f'  \033[0;32m{name:30s} up-to-date\033[0m')
-    else:
-        print(f'  \033[0;33m{name:30s} changed (local: {old_hash}, source: {new_hash})\033[0m')
-" "$REGISTRY"
-}
-
-# --- update ---
-cmd_update() {
-  local user_description=""
-  local skill_name=""
-
-  while [ $# -gt 0 ]; do
-    case "$1" in
-      --description)
-        user_description="${2:-}"
-        shift 2
-        ;;
-      *)
-        skill_name="$1"
-        shift
-        ;;
-    esac
-  done
-
-  if [ -z "$skill_name" ]; then
-    echo -e "${RED}Error: skill name is required${NC}" >&2
-    echo "Usage: $(basename "$0") update [--description \"说明\"] <skill-name>" >&2
-    exit 1
-  fi
-
-  ensure_registry
-
-  local record
-  record="$(find_in_registry "$skill_name")" || {
-    echo -e "${RED}Error: $skill_name is not an imported skill${NC}" >&2
-    exit 1
-  }
-
-  local source_path
-  source_path="$(echo "$record" | python3 -c "import json,sys; print(json.load(sys.stdin)['source'])")"
-
-  if [ ! -d "$source_path" ]; then
-    echo -e "${RED}Error: source path no longer exists: $source_path${NC}" >&2
-    exit 1
-  fi
-
-  if [ ! -f "$source_path/SKILL.md" ]; then
-    echo -e "${RED}Error: SKILL.md not found in $source_path${NC}" >&2
-    exit 1
-  fi
-
-  local target_dir="$SKILLS_DIR/$skill_name"
-
-  local source_hash
-  source_hash="$(compute_hash "$source_path")"
-  local local_hash
-  local_hash="$(compute_hash "$target_dir" 2>/dev/null || echo "none")"
-
-  if [ "$source_hash" = "$local_hash" ]; then
-    echo -e "${GREEN}Already up-to-date: $skill_name${NC}"
-    return 0
-  fi
-
-  local description="$user_description"
-  if [ -z "$description" ]; then
-    description="$(echo "$record" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('description',''))")"
-  fi
-  if [ -z "$description" ]; then
-    description="$(extract_english_description "$source_path/SKILL.md")"
-  fi
-
-  rm -rf "$target_dir"
-  cp -R "$source_path" "$target_dir"
-
-  local now
-  now="$(date -u +%Y-%m-%dT%H:%M:%S+00:00)"
-
-  python3 -c "
-import json, sys
-with open(sys.argv[1]) as f:
-    data = json.load(f)
-for s in data['skills']:
-    if s['name'] == sys.argv[2]:
-        s['updatedAt'] = sys.argv[3]
-        s['sourceHash'] = sys.argv[4]
-        s['description'] = sys.argv[5]
-        break
-with open(sys.argv[1], 'w') as f:
-    json.dump(data, f, indent=2, ensure_ascii=False)
-    f.write('\n')
-" "$REGISTRY" "$skill_name" "$now" "$source_hash" "$description"
-
-  update_skill_index "$skill_name" "$description"
-
-  echo -e "${GREEN}Updated: $skill_name${NC}"
-}
-
-# --- 主入口 ---
-if [ "$#" -eq 0 ]; then
-  usage
-  exit 1
-fi
-
-COMMAND="$1"
-shift
-
-case "$COMMAND" in
-  import) cmd_import "$@" ;;
-  remove) cmd_remove "$@" ;;
-  list)   cmd_list "$@" ;;
-  status) cmd_status "$@" ;;
-  update) cmd_update "$@" ;;
-  --help|-h) usage ;;
+case "$cmd" in
+  setup)        cmd_setup ;;
+  add)          cmd_add "$@" ;;
+  add-custom)   cmd_add_custom "${1:-}" ;;
+  remove)       cmd_remove "${1:-}" ;;
+  list)         cmd_list ;;
+  update-readme) cmd_update_readme ;;
   *)
-    echo -e "${RED}Error: unknown command: $COMMAND${NC}" >&2
-    usage >&2
+    echo "用法: $0 <command> [args]"
+    echo ""
+    echo "命令:"
+    echo "  setup                          创建用户级软链接 (~/.claude/skills → 目录链接, ~/.codex/skills/tiga-skills → 子链接)"
+    echo "  add <path> [--name <name>]     从外部路径添加技能"
+    echo "  add-custom <name>              从 03-custom-skills/ 添加技能"
+    echo "  remove <name>                  移除技能软链接"
+    echo "  list                           列出已注册技能"
+    echo "  update-readme                  更新 README.md 技能清单"
     exit 1
     ;;
 esac

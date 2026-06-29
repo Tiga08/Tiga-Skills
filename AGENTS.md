@@ -1,80 +1,77 @@
-# Tiga-Skills — Agent Capability Library
+# Tiga-Skills: Centralized Agent Skills Repository
 
-Tiga-Skills organizes prompts, agent skills, workflows, and utility scripts into a structured, discoverable collection. It is a pure content repository with no application code, no build system, and no runtime dependencies.
+Tiga-Skills is a content and script repository that centrally registers external and custom Agent Skills via symlinks, exposing them to Claude Code and Codex. This repository contains no application code, build systems, or runtime dependencies. The core constraint is that `02-agent-skills/` serves only as a symlink registry, custom skill source files live in `03-custom-skills/`, and all skill registration and removal must go through `./04-scripts/manage-skills.sh`.
 
-## Repository Structure
+## Structure
 
-| Directory | Role | Purpose |
-|-----------|------|---------|
-| `00-skill-index/` | Index | Unified capability index (derived — partially regenerable) |
-| `01-prompts/` | Content | Reusable prompt templates |
-| `02-agent-skills/` | Content | Agent skills (SKILL.md format), including external imports tracked by `skill-registry.json` |
-| `03-workflows/` | Content | Multi-step workflow definitions |
-| `04-scripts/` | Tooling | Utility scripts for linking, importing, and index syncing |
-| `05-custom-skills/` | Content | User-defined custom skills (isolated from imports) |
-| `agent-plan/` | Scratch | Agent-generated plan files and drafts |
-| `Todo/` | Scratch | Task tracking notes |
+| Directory | Purpose | Authority |
+| --------- | ------- | --------- |
+| `.agents/skills/` | Project-level skills shared across agents; `.claude/skills` and `.codex/skills` symlink here | primary |
+| `.claude/` | Claude Code project configuration; `skills/` is a symlink to `.agents/skills` | config |
+| `.codex/` | Codex project configuration; `skills/` is a symlink to `.agents/skills` | config |
+| `01-prompts/` | Reusable prompt templates | primary |
+| `02-agent-skills/` | Agent Skills registry; all entries should be symlinks | derived |
+| `03-custom-skills/` | Source files for project-internal custom skills | primary |
+| `04-scripts/` | Scripts for skill registration, removal, setup, and README updates | primary |
+| `agent-plan/` | Agent-generated plans and drafts; git-ignored | derived |
+| `Todo/` | Local to-dos and working notes; git-ignored | derived |
 
-Each content directory has its own `README.md` defining format specifications and conventions.
-
-Directories with additional layer-specific rules in their own `CLAUDE.md`: `00-skill-index/`, `02-agent-skills/`, `05-custom-skills/`.
-
-## Source-of-Truth Rules
-
-- `01-prompts/` is the primary source for prompt templates.
-- `02-agent-skills/skills/` is the primary source for agent skill definitions. External imports are tracked in `02-agent-skills/skill-registry.json`.
-- `05-custom-skills/skills/` is the primary source for user-defined skills.
-- `03-workflows/` is the primary source for workflow definitions.
-- `04-scripts/` is the primary source for automation scripts.
-- `00-skill-index/README.md` is a derived index — aggregates entries from content directories.
-- `agent-plan/` contains drafts and working notes — not authoritative.
-
-## Working Rules
-
-1. Read the target directory's `README.md` and `CLAUDE.md` (if present) before adding or modifying content.
-2. Edit only what the task requires — do not reformat or reorganize adjacent files.
-3. After adding content, update `00-skill-index/README.md` with a new entry.
-4. Do not directly edit skills tracked in `skill-registry.json` — use `04-scripts/manage-skills.sh update`.
-5. Use `04-scripts/link-skills.sh` to manage symlinks to local agent config directories.
-6. Descriptions must accurately reflect content — do not exaggerate capabilities.
-7. Communicate with the user in Simplified Chinese. Keep technical terms, commands, code, and API names in English. Write config files (`CLAUDE.md`, `AGENTS.md`, YAML frontmatter) in English. Use UTF-8 encoding, kebab-case file names, and CommonMark spec for all Markdown.
+Only root-level governance files are maintained. Do not generate subdirectory `CLAUDE.md` files unless the user explicitly requests it.
 
 ## Markdown Generation
 
-- Create Markdown files only when explicitly requested.
-- Save generated Markdown under `agent-plan/` unless the user specifies a path.
-- Name generated files as `YYYY-MM-DD_{purpose}.md`.
-- Create `agent-plan/` if it does not exist.
-- Exceptions: translations stay next to the source file; project files (`CLAUDE.md`, `AGENTS.md`, `README.md`, `CHANGELOG.md`) stay at conventional locations.
+- Only create Markdown files when explicitly requested by the user.
+- Unless the user specifies another path, save generated Markdown under `agent-plan/`; create the directory if it does not exist.
+- Name generated Markdown files `YYYY-MM-DD_{purpose}.md`.
+- Exceptions:
+  - Translation files follow the md-to-zh skill's output rules: governance files (`AGENTS.md`, `CLAUDE.md`) are translated as `.zh.md` next to the source; all other files are output to `agent-plan/translations/`.
+  - Project governance files such as `CLAUDE.md`, `AGENTS.md`, `README.md`, and `CHANGELOG.md` stay at their conventional locations.
+
+## Skills
+
+### Project-level Skills
+
+- Project-level skills live in `.agents/skills/<name>/SKILL.md`.
+- `.claude/skills` and `.codex/skills` are symlinks pointing to `.agents/skills`, so all supported agents share one skill library.
+- Project-level skills are for operating this repository itself (e.g., `manage-skills`).
+
+### Registry Skills
+
+- Create and edit registry skill source files in `03-custom-skills/`.
+- Use `./04-scripts/manage-skills.sh add-custom <name>` to register a custom skill to `02-agent-skills/`.
+- Use `./04-scripts/manage-skills.sh add <path> [--name <name>]` to register an external skill.
+- Use `./04-scripts/manage-skills.sh remove <name>` to remove a skill registration.
+- After any skill registration, removal, or metadata change, run `./04-scripts/manage-skills.sh update-readme` to refresh the `README.md` skill list.
 
 ## Boundaries
 
 **Always:**
-- Read the target directory's `README.md` before modifying its contents.
-- Verify `name` and `description` exist in SKILL.md frontmatter.
-- Update `00-skill-index/README.md` when adding or removing content.
-- Use `link-skills.sh` and `manage-skills.sh` for symlink and import operations.
+
+- Read relevant files before modifying them.
+- Treat `02-agent-skills/` as a symlink registry; never edit skill content directly within it.
+- When modifying custom skills, edit the source files under `03-custom-skills/<name>/`.
+- Use `./04-scripts/manage-skills.sh` for skill registration, removal, and user-level setup.
+- Keep the `README.md` skill list consistent with the current registration state of `02-agent-skills/`.
 
 **Ask First:**
-- Creating or deleting skill, prompt, or workflow files.
-- Modifying `skill-registry.json` or imported skill content.
-- Changing directory structure or renaming directories.
-- Running destructive operations (`manage-skills.sh remove`, `link-skills.sh --unlink`).
+
+- Creating or deleting skills, prompts, scripts, or governance files.
+- Overwriting existing `AGENTS.md`, `CLAUDE.md`, or `README.md`.
+- Modifying `.claude/`, `.gitignore`, or other core configuration.
+- Registering, removing, or renaming skills.
+- Pulling or syncing content from external upstream repositories.
 
 **Never:**
-- Fabricate skill descriptions that don't match actual content.
-- Directly edit imported skills — use `manage-skills.sh update`.
-- Delete or overwrite `skill-registry.json` manually.
-- Create symlinks to agent config directories without using `link-skills.sh`.
-- Treat `agent-plan/` content as authoritative.
+
+- Directly modify external skill source files that are symlinked from `02-agent-skills/`.
+- Manually create or delete symlinks in `02-agent-skills/` to bypass `manage-skills.sh`.
+- Fabricate skill names, sources, or descriptions.
+- Leak, commit, or output `.env`, tokens, cookies, private keys, or other sensitive data.
+- Delete, bypass, or weaken validation steps in order to pass checks.
 
 ## Instruction Priority
 
-When instructions conflict, follow this order:
-
 1. Explicit user instructions
-2. Directory-level `CLAUDE.md` rules for the content being edited
-3. Repository constraints in this file (`AGENTS.md`)
-4. Evidence in source-of-truth directories
-5. Existing style and conventions in source materials
-6. Default model behavior
+2. This `AGENTS.md`
+3. Evidence from the current repository files and directory structure
+4. Existing style and conventions
