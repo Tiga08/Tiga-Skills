@@ -55,10 +55,24 @@ Tiga-Skills/
 
 | 名称 | 来源 | 描述 |
 | ---- | ---- | ---- |
+| brainstorming | superpowers | 创意工作前的需求探索与设计思考 |
 | check-docs | custom | 检查治理文档（README.md、CLAUDE.md、AGENTS.md）是否与仓库实际状态一致 |
+| dispatching-parallel-agents | superpowers | 并行调度多个独立任务 |
 | draft-commit | custom | 分析所有待提交的 git 变更，生成可直接使用的 commit 命令（不执行） |
+| executing-plans | superpowers | 在独立会话中按计划执行实施 |
+| finishing-a-development-branch | superpowers | 开发分支完成后的集成决策 |
 | gen-governance | custom | 分析仓库结构并生成 AGENTS.md / CLAUDE.md 治理文件 |
 | md-to-zh | custom | 将英文 Markdown 文件翻译为简体中文 |
+| receiving-code-review | superpowers | 收到审查反馈后的技术验证与实施 |
+| requesting-code-review | superpowers | 完成任务后请求代码审查 |
+| subagent-driven-development | superpowers | 在当前会话中使用子代理执行独立任务 |
+| systematic-debugging | superpowers | 系统化调试，遇到 bug 时先分析再修复 |
+| test-driven-development | superpowers | 测试驱动开发，先写测试再写实现 |
+| using-git-worktrees | superpowers | 使用 git worktree 创建隔离工作区 |
+| using-superpowers | superpowers | 会话启动时的技能发现与使用流程 |
+| verification-before-completion | superpowers | 完成声明前的验证检查 |
+| writing-plans | superpowers | 根据需求编写多步骤实施计划 |
+| writing-skills | superpowers | 创建、编辑和验证技能 |
 
 <!-- END SKILL LIST -->
 
@@ -66,7 +80,22 @@ Tiga-Skills/
 
 ### 外部仓库
 
-当前无已注册的外部技能。使用 `./04-scripts/manage-skills.sh add <path>` 添加外部技能。
+来源于 [AG-Tools/superpowers](https://github.com/Tiga08/AG-Tools)，通过 `add` 命令注册：
+
+- **brainstorming** — 创意工作前的需求探索与设计思考
+- **writing-plans** — 根据需求编写多步骤实施计划
+- **executing-plans** — 在独立会话中按计划执行实施
+- **subagent-driven-development** — 在当前会话中使用子代理执行独立任务
+- **dispatching-parallel-agents** — 并行调度多个独立任务
+- **using-git-worktrees** — 使用 git worktree 创建隔离工作区
+- **test-driven-development** — 测试驱动开发，先写测试再写实现
+- **systematic-debugging** — 系统化调试，遇到 bug 时先分析再修复
+- **verification-before-completion** — 完成声明前的验证检查
+- **requesting-code-review** — 完成任务后请求代码审查
+- **receiving-code-review** — 收到审查反馈后的技术验证与实施
+- **finishing-a-development-branch** — 开发分支完成后的集成决策
+- **writing-skills** — 创建、编辑和验证技能
+- **using-superpowers** — 会话启动时的技能发现与使用流程
 
 ### 自定义技能
 
