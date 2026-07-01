@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # 技能管理脚本 — 管理 02-agent-skills/ 中的软链接并更新 README.md
-# 02-agent-skills/ 按来源分组为子目录（superpowers/、custom-skills/ 等）
+# 02-agent-skills/ 为扁平结构：技能软链接直接位于该目录下，来源分类通过解析符号链接目标推断，仅用于展示分组
 
 set -euo pipefail
 
@@ -38,16 +38,41 @@ category_description() {
   esac
 }
 
-# 判断技能来源类别，返回子目录名
+# 判断技能来源类别（用于展示分组，不再对应物理子目录）
 classify_source() {
   local target="$1"
   if [[ "$target" == *"/AG-Tools/"* ]]; then
     echo "$target" | sed -n 's|.*/AG-Tools/\([^/]*\)/.*|\1|p'
-  elif [[ "$target" == *"03-custom-skills/"* ]] || [[ "$target" == "../../03-custom-skills/"* ]]; then
+  elif [[ "$target" == *"03-custom-skills/"* ]]; then
     echo "custom-skills"
   else
     echo "external"
   fi
+}
+
+# 遍历 $SKILLS_DIR 下所有一级符号链接，输出 "分类\t名称\t描述" 到指定文件
+collect_skill_rows() {
+  local outfile="$1"
+  : > "$outfile"
+
+  local link
+  for link in "$SKILLS_DIR"/*; do
+    [ -L "$link" ] || continue
+    local name target category resolved desc
+    name="$(basename "$link")"
+    target="$(readlink "$link")"
+    category="$(classify_source "$target")"
+
+    resolved="$(cd "$SKILLS_DIR" && cd "$target" 2>/dev/null && pwd)" || resolved=""
+    desc=""
+    if [ -n "$resolved" ] && [ -f "$resolved/SKILL.md" ]; then
+      desc="$(extract_field "$resolved/SKILL.md" "description_zh")"
+      [ -z "$desc" ] && desc="$(lookup_description_zh "$name")"
+      [ -z "$desc" ] && desc="$(extract_field "$resolved/SKILL.md" "description")"
+    fi
+
+    printf '%s\t%s\t%s\n' "$category" "$name" "$desc" >> "$outfile"
+  done
 }
 
 # ── setup ──
@@ -146,16 +171,14 @@ cmd_add() {
 
   [ -z "$name" ] && name="$(basename "$source_path")"
 
-  # 根据来源确定子目录
+  local link="$SKILLS_DIR/$name"
+  [ -e "$link" ] && die "技能 '$name' 已存在于 02-agent-skills/"
+
   local category
   category="$(classify_source "$source_path")"
-  mkdir -p "$SKILLS_DIR/$category"
-
-  local link="$SKILLS_DIR/$category/$name"
-  [ -e "$link" ] && die "技能 '$name' 已存在于 02-agent-skills/$category/"
 
   ln -s "$source_path" "$link"
-  echo "✓ 已添加 $name -> $source_path（分类: $category）"
+  echo "✓ 已添加 ${name} -> ${source_path}（分类: ${category}）"
   cmd_update_readme
 }
 
@@ -166,13 +189,11 @@ cmd_add_custom() {
   [ -z "$name" ] && die "用法: $0 add-custom <name>"
   [ -d "$CUSTOM_DIR/$name" ] || die "自定义技能不存在: 03-custom-skills/$name"
 
-  mkdir -p "$SKILLS_DIR/custom-skills"
+  local link="$SKILLS_DIR/$name"
+  [ -e "$link" ] && die "技能 '$name' 已存在于 02-agent-skills/"
 
-  local link="$SKILLS_DIR/custom-skills/$name"
-  [ -e "$link" ] && die "技能 '$name' 已存在于 02-agent-skills/custom-skills/"
-
-  ln -s "../../03-custom-skills/$name" "$link"
-  echo "✓ 已添加 $name -> ../../03-custom-skills/$name（分类: custom-skills）"
+  ln -s "../03-custom-skills/$name" "$link"
+  echo "✓ 已添加 ${name} -> ../03-custom-skills/${name}（分类: custom-skills）"
   cmd_update_readme
 }
 
@@ -182,15 +203,14 @@ cmd_remove() {
   local name="$1"
   [ -z "$name" ] && die "用法: $0 remove <name>"
 
-  # 在子目录中搜索匹配的软链接
   local found
-  found="$(find "$SKILLS_DIR" -mindepth 2 -maxdepth 2 -name "$name" -type l 2>/dev/null | head -1)"
+  found="$(find "$SKILLS_DIR" -mindepth 1 -maxdepth 1 -name "$name" -type l 2>/dev/null | head -1)"
 
-  [ -z "$found" ] && die "未找到技能 '$name'（已在所有子目录中搜索）"
+  [ -z "$found" ] && die "未找到技能 '$name'"
   [ -L "$found" ] || die "'$found' 不是软链接，拒绝删除"
 
   rm "$found"
-  echo "✓ 已移除 $name（位于 $(dirname "$found" | xargs basename)/）"
+  echo "✓ 已移除 $name"
   cmd_update_readme
 }
 
@@ -200,44 +220,42 @@ cmd_list() {
   echo "已注册技能:"
   echo "─────────────────────────────────────────────────────"
 
+  local rowsfile
+  rowsfile="$(mktemp)"
+  collect_skill_rows "$rowsfile"
+
   local total=0
+  local ordered_categories="custom-skills superpowers"
+  local category
 
-  for category_dir in "$SKILLS_DIR"/*/; do
-    [ -d "$category_dir" ] || continue
-    local category
-    category="$(basename "$category_dir")"
-
-    local count=0
-    for link in "$category_dir"*/; do
-      [ -L "${link%/}" ] || continue
-      count=$((count + 1))
-    done
-
-    [ "$count" -eq 0 ] && continue
+  print_category_list() {
+    local category="$1"
+    local count
+    count="$(awk -F'\t' -v c="$category" '$1==c' "$rowsfile" | wc -l | tr -d ' ')"
+    [ "$count" -eq 0 ] && return
 
     echo ""
     echo "[$category] ($count 个)"
     printf "  %-35s %s\n" "名称" "描述"
     echo "  ───────────────────────────────────────────────────"
 
-    for link in "$category_dir"*/; do
-      [ -L "${link%/}" ] || continue
-      local name
-      name="$(basename "${link%/}")"
-
-      local desc=""
-      local resolved
-      resolved="$(cd "$SKILLS_DIR/$category" && cd "$(readlink "${link%/}")" 2>/dev/null && pwd)" || resolved=""
-      if [ -n "$resolved" ] && [ -f "$resolved/SKILL.md" ]; then
-        desc="$(extract_field "$resolved/SKILL.md" "description_zh")"
-        [ -z "$desc" ] && desc="$(lookup_description_zh "$name")"
-        [ -z "$desc" ] && desc="$(extract_field "$resolved/SKILL.md" "description")"
-      fi
-
+    while IFS=$'\t' read -r cat name desc; do
+      [ "$cat" = "$category" ] || continue
       printf "  %-35s %s\n" "$name" "$desc"
       total=$((total + 1))
-    done
+    done < "$rowsfile"
+  }
+
+  for category in $ordered_categories; do
+    print_category_list "$category"
   done
+
+  for category in $(cut -f1 "$rowsfile" | sort -u); do
+    [[ " $ordered_categories " == *" $category "* ]] && continue
+    print_category_list "$category"
+  done
+
+  rm -f "$rowsfile"
 
   if [ "$total" -eq 0 ]; then
     echo "(无)"
@@ -251,22 +269,18 @@ cmd_list() {
 cmd_update_readme() {
   [ -f "$README" ] || die "README.md 不存在"
 
-  local tmpfile
+  local tmpfile tablefile rowsfile
   tmpfile="$(mktemp)"
-  local tablefile
   tablefile="$(mktemp)"
+  rowsfile="$(mktemp)"
+  collect_skill_rows "$rowsfile"
 
-  # 输出单个分类目录的表格
+  # 输出单个分类的表格
   generate_category_table() {
     local category="$1"
-    local category_dir="$SKILLS_DIR/$category"
-    [ -d "$category_dir" ] || return
-
-    local has_links=0
-    for link in "$category_dir"/*/; do
-      [ -L "${link%/}" ] && { has_links=1; break; }
-    done
-    [ "$has_links" -eq 0 ] && return
+    local count
+    count="$(awk -F'\t' -v c="$category" '$1==c' "$rowsfile" | wc -l | tr -d ' ')"
+    [ "$count" -eq 0 ] && return
 
     echo "### $category"
     echo ""
@@ -275,22 +289,10 @@ cmd_update_readme() {
     echo "| 名称 | 描述 |"
     echo "| ---- | ---- |"
 
-    for link in "$category_dir"/*/; do
-      [ -L "${link%/}" ] || continue
-      local name
-      name="$(basename "${link%/}")"
-
-      local desc=""
-      local resolved
-      resolved="$(cd "$category_dir" && cd "$(readlink "${link%/}")" 2>/dev/null && pwd)" || resolved=""
-      if [ -n "$resolved" ] && [ -f "$resolved/SKILL.md" ]; then
-        desc="$(extract_field "$resolved/SKILL.md" "description_zh")"
-        [ -z "$desc" ] && desc="$(lookup_description_zh "$name")"
-        [ -z "$desc" ] && desc="$(extract_field "$resolved/SKILL.md" "description")"
-      fi
-
+    while IFS=$'\t' read -r cat name desc; do
+      [ "$cat" = "$category" ] || continue
       echo "| $name | $desc |"
-    done
+    done < "$rowsfile"
 
     echo ""
   }
@@ -328,15 +330,13 @@ cmd_update_readme() {
 
     # 2. 指定顺序的分类
     local ordered_categories="custom-skills superpowers"
+    local category
     for category in $ordered_categories; do
       generate_category_table "$category"
     done
 
     # 3. 其余分类按字母序
-    for category_dir in "$SKILLS_DIR"/*/; do
-      [ -d "$category_dir" ] || continue
-      local category
-      category="$(basename "$category_dir")"
+    for category in $(cut -f1 "$rowsfile" | sort -u); do
       [[ " $ordered_categories " == *" $category "* ]] && continue
       generate_category_table "$category"
     done
@@ -358,7 +358,7 @@ cmd_update_readme() {
   ' "$README" > "$tmpfile"
 
   mv "$tmpfile" "$README"
-  rm -f "$tablefile"
+  rm -f "$tablefile" "$rowsfile"
   echo "✓ README.md 技能清单已更新"
 }
 
@@ -379,9 +379,9 @@ case "$cmd" in
     echo ""
     echo "命令:"
     echo "  setup                          创建用户级软链接 (~/.claude/skills → 目录链接, ~/.codex/skills/tiga-skills → 子链接)"
-    echo "  add <path> [--name <name>]     从外部路径添加技能（自动按来源分组到子目录）"
-    echo "  add-custom <name>              从 03-custom-skills/ 添加技能到 custom-skills/ 子目录"
-    echo "  remove <name>                  按名称搜索并移除技能软链接"
+    echo "  add <path> [--name <name>]     从外部路径添加技能到 02-agent-skills/"
+    echo "  add-custom <name>              从 03-custom-skills/ 添加技能到 02-agent-skills/"
+    echo "  remove <name>                  按名称移除技能软链接"
     echo "  list                           按来源分组列出已注册技能"
     echo "  update-readme                  更新 README.md 技能清单（按来源分组）"
     exit 1

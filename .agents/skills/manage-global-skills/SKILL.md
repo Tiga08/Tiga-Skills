@@ -4,7 +4,7 @@ description: Manage the global agent skills registry — add, remove, list, and 
 description_zh: 管理全局 agent 技能注册表 — 在 Tiga-Skills 中添加、移除、列出技能，并按来源分组配置软链接
 ---
 
-Manage the skills registered in `02-agent-skills/` via the management script. Skills are organized into subdirectories by source (e.g., `superpowers/`, `custom-skills/`).
+Manage the skills registered in `02-agent-skills/` via the management script. Skills are stored flat: each entry is a symlink directly under `02-agent-skills/`, and its source (e.g., `superpowers`, `custom-skills`) is inferred by resolving the symlink target.
 
 ## Available Operations
 
@@ -15,7 +15,7 @@ Parse the user's intent and map it to one of the following commands:
 | Set up user-level symlinks | `./04-scripts/manage-skills.sh setup` |
 | Add a skill from an external path | `./04-scripts/manage-skills.sh add <path> [--name <name>]` |
 | Add a custom skill from `03-custom-skills/` | `./04-scripts/manage-skills.sh add-custom <name>` |
-| Remove a skill (searched by name across subdirectories) | `./04-scripts/manage-skills.sh remove <name>` |
+| Remove a skill (looked up by name under `02-agent-skills/`) | `./04-scripts/manage-skills.sh remove <name>` |
 | List registered skills (grouped by source) | `./04-scripts/manage-skills.sh list` |
 | Update the README skill list | `./04-scripts/manage-skills.sh update-readme` |
 
@@ -28,10 +28,9 @@ Parse the user's intent and map it to one of the following commands:
 
 ## Notes
 
-- `02-agent-skills/` uses subdirectories to group skills by source: `superpowers/` for AG-Tools skills, `custom-skills/` for project-internal skills, etc.
-- The `add` command auto-classifies the source and places the symlink in the appropriate subdirectory.
-- `add-custom` always creates symlinks under `custom-skills/` with relative paths (`../../03-custom-skills/<name>`).
-- `remove` searches all subdirectories by name — no need to specify the source category.
+- `02-agent-skills/` is flat: every skill entry is a symlink placed directly in that directory. Source classification (`superpowers`, `custom-skills`, etc.) is inferred from each symlink's target and used only for `list`/README grouping — there are no physical source subdirectories.
+- `add-custom` creates symlinks directly under `02-agent-skills/` with relative paths (`../03-custom-skills/<name>`).
+- `remove` looks up the symlink by name directly under `02-agent-skills/` — no need to specify the source category.
 - Both `add` and `remove` automatically run `update-readme` to refresh the skill list.
 - `update-readme` generates grouped skill tables with source descriptions, and includes project-level skills from `.agents/skills/`.
 - For `setup`, the script creates:

@@ -10,9 +10,7 @@ Tiga-Skills/
 ├── .claude/             # Claude Code 项目配置
 ├── .codex/              # Codex 项目配置
 ├── 01-prompts/          # 可复用的 Prompt 模板
-├── 02-agent-skills/     # Agent Skills 注册表（按来源分组）
-│   ├── custom-skills/   # 自定义技能软链接
-│   └── superpowers/     # AG-Tools superpowers 技能软链接
+├── 02-agent-skills/     # Agent Skills 注册表（扁平存放技能软链接，分组仅体现在下方技能清单文档中）
 ├── 03-custom-skills/    # 用户自定义 Skills（源文件）
 ├── 04-scripts/          # 实用脚本
 ├── agent-plan/          # Agent 生成的计划文件（git-ignored）
@@ -21,8 +19,8 @@ Tiga-Skills/
 
 - **.agents/skills/** — 项目级技能，`.claude/skills` 和 `.codex/skills` 均为指向此目录的软链接。
 - **.claude/** / **.codex/** — Agent 项目配置目录，`skills` 均指向 `.agents/skills/`。
-- **02-agent-skills/** — 按来源分组的技能注册表，分组目录下的技能条目为软链接。
-- **03-custom-skills/** — 存放项目内自定义技能的源文件，通过相对路径软链接注册到 `02-agent-skills/custom-skills/`。
+- **02-agent-skills/** — 技能注册表，技能条目以软链接形式直接扁平存放在该目录下，来源分组仅体现在 README 技能清单中。
+- **03-custom-skills/** — 存放项目内自定义技能的源文件，通过相对路径软链接注册到 `02-agent-skills/`。
 
 ## 安装
 

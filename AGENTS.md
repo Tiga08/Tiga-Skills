@@ -1,6 +1,6 @@
 # Tiga-Skills: Centralized Agent Skills Repository
 
-Tiga-Skills is a content and script repository that centrally registers external and custom Agent Skills via grouped symlinks, exposing them to Claude Code and Codex. This repository contains no application code, build systems, or runtime dependencies. The core constraint is that `02-agent-skills/` serves only as a grouped symlink registry, custom skill source files live in `03-custom-skills/`, and all skill registration and removal must go through `./04-scripts/manage-skills.sh`.
+Tiga-Skills is a content and script repository that centrally registers external and custom Agent Skills via flat symlinks, exposing them to Claude Code and Codex. This repository contains no application code, build systems, or runtime dependencies. The core constraint is that `02-agent-skills/` serves only as a flat symlink registry, custom skill source files live in `03-custom-skills/`, and all skill registration and removal must go through `./04-scripts/manage-skills.sh`.
 
 ## Structure
 
@@ -10,7 +10,7 @@ Tiga-Skills is a content and script repository that centrally registers external
 | `.claude/` | Claude Code project configuration; `skills/` is a symlink to `.agents/skills` | config |
 | `.codex/` | Codex project configuration; `skills/` is a symlink to `.agents/skills` | config |
 | `01-prompts/` | Reusable prompt templates | primary |
-| `02-agent-skills/` | Agent Skills registry grouped by source; skill entries under each group should be symlinks | derived |
+| `02-agent-skills/` | Flat Agent Skills registry; skill entries are symlinks placed directly in this directory, grouping by source is shown only in README | derived |
 | `03-custom-skills/` | Source files for project-internal custom skills | primary |
 | `04-scripts/` | Scripts for skill registration, removal, setup, and README updates | primary |
 | `agent-plan/` | Agent-generated plans and drafts; git-ignored | derived |
@@ -48,7 +48,7 @@ Only root-level governance files are maintained. Do not generate subdirectory `C
 **Always:**
 
 - Read relevant files before modifying them.
-- Treat `02-agent-skills/` as a grouped symlink registry; never edit skill content directly within it.
+- Treat `02-agent-skills/` as a flat symlink registry; never edit skill content directly within it.
 - When modifying custom skills, edit the source files under `03-custom-skills/<name>/`.
 - Use `./04-scripts/manage-skills.sh` for skill registration, removal, and user-level setup.
 - Keep the `README.md` skill list consistent with the current registration state of `02-agent-skills/`.
@@ -64,7 +64,7 @@ Only root-level governance files are maintained. Do not generate subdirectory `C
 **Never:**
 
 - Directly modify external skill source files that are symlinked from `02-agent-skills/`.
-- Manually create or delete symlinks in `02-agent-skills/` subdirectories to bypass `manage-skills.sh`.
+- Manually create or delete symlinks directly under `02-agent-skills/` to bypass `manage-skills.sh`.
 - Fabricate skill names, sources, or descriptions.
 - Leak, commit, or output `.env`, tokens, cookies, private keys, or other sensitive data.
 - Delete, bypass, or weaken validation steps in order to pass checks.
