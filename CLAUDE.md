@@ -5,7 +5,7 @@
 ## Constraints
 
 - This repository is an Agent Skills management repo, not an application or library. Do not add build systems, runtime dependencies, or application frameworks unless the user explicitly requests it.
-- Skill entries under `02-agent-skills/<source>/` must remain symlinks; source grouping directories are real directories. Do not place regular skill directories there or directly edit symlink targets.
+- Skill entries directly under `02-agent-skills/` must remain symlinks (flat, no source subdirectories). Do not place regular skill directories there or directly edit symlink targets.
 - Project-level skills (for operating this repository) live in `.agents/skills/`. `.claude/skills` and `.codex/skills` are symlinks pointing there.
 - Registry skill source files live in `03-custom-skills/`. When modifying registry skills, work in the source directory, then run `./04-scripts/manage-skills.sh update-readme` to refresh documentation.
 - External skills are maintained by upstream repositories. Check upstream status before syncing external skills, and only pull or register changes after user confirmation.
@@ -13,11 +13,11 @@
 
 ## Common Gotchas
 
-1. **Treating `02-agent-skills/` as a source directory.** It is a grouped registry view; source directories such as `custom-skills/` and `superpowers/` are real directories, and skill entries inside them should be symlinks. To modify registry skills, edit `03-custom-skills/`. For external skills, go to the upstream repository. Project-level skills live in `.agents/skills/`, not here.
+1. **Treating `02-agent-skills/` as a source directory.** It is a flat symlink registry; source classification is inferred by resolving each symlink's target and shown only in README grouping — there are no physical source subdirectories. To modify registry skills, edit `03-custom-skills/`. For external skills, go to the upstream repository. Project-level skills live in `.agents/skills/`, not here.
 
 2. **Bypassing `manage-skills.sh` for symlink management.** Manually creating or deleting symlinks causes the README skill list to diverge from actual registration state. Use `./04-scripts/manage-skills.sh` for adding, removing, setup, and list updates.
 
-3. **Forgetting to update the README skill list.** After skill changes, run `./04-scripts/manage-skills.sh update-readme`. This command scans symlinks under grouped subdirectories in `02-agent-skills/` and extracts metadata from each `SKILL.md`.
+3. **Forgetting to update the README skill list.** After skill changes, run `./04-scripts/manage-skills.sh update-readme`. This command scans symlinks directly under `02-agent-skills/`, inferring each entry's category by resolving its symlink target, and extracts metadata from each `SKILL.md`.
 
 4. **Treating `agent-plan/` or `Todo/` as authoritative content.** These directories are local drafts and working notes, excluded by `.gitignore`. Only promote their content to formal directories when the user explicitly requests it.
 
