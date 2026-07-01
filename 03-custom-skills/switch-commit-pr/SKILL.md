@@ -72,19 +72,30 @@ Run the following commands and read their output carefully:
 
 ### Phase 3: pr (`pr` mode only, in addition to Phase 1 + Phase 2)
 
-1. Check whether the branch already has an associated remote PR (e.g. `gh pr view --json url 2>/dev/null` or equivalent). If one exists, tell the user and stop this phase instead of generating a duplicate create command.
-2. `gh pr create` requires the branch to be pushed, so first generate:
+1. **Check existing PR** — run `gh pr view --json url 2>/dev/null` or equivalent. If a PR already exists for this branch, tell the user and stop this phase.
+2. **Analyze full branch range** — if the branch has multiple commits ahead of `main`, run `git log main..HEAD --oneline` and `git diff main...HEAD --stat` to understand the complete scope of the branch, not just the latest diff. Use this combined with Phase 2's change analysis to inform the PR content.
+3. **Push** — generate:
    ```bash
    git push -u origin <branch>
    ```
-3. Then generate the PR command, with a body following the Summary/Test plan structure:
+4. **Derive PR title** — from the commit subjects or overall branch purpose, write a concise title ≤ 70 characters. For single-commit branches, reuse the commit subject directly. For multi-commit branches, synthesize a title that captures the overall goal.
+5. **Generate PR body**:
+   - **Summary**: 1–3 bullet points describing what changed and why. Derive from Phase 2 change analysis and multi-commit history. Focus on impact and purpose, not file lists.
+   - **Test plan**: markdown checkbox checklist with concrete verification steps a reviewer can follow.
+   - **Signature**: always end with `🤖 Generated with [Claude Code](https://claude.com/claude-code)`.
+6. **Generate the command**:
    ```bash
-   gh pr create --title "<title>" --body "$(cat <<'EOF'
+   gh pr create --title "<concise title ≤ 70 chars>" --body "$(cat <<'EOF'
    ## Summary
-   - ...
+   - <what changed and why — bullet 1>
+   - <bullet 2 if needed>
+   - <bullet 3 if needed>
 
    ## Test plan
-   - [ ] ...
+   - [ ] <concrete verification step 1>
+   - [ ] <concrete verification step 2>
+
+   🤖 Generated with [Claude Code](https://claude.com/claude-code)
    EOF
    )"
    ```
