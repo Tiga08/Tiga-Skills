@@ -17,6 +17,7 @@ Parse the user's intent and map it to one of the following commands:
 | Add a custom skill from `03-custom-skills/` | `./04-scripts/manage-skills.sh add-custom <name>` |
 | Remove a skill (looked up by name under `02-agent-skills/`) | `./04-scripts/manage-skills.sh remove <name>` |
 | List registered skills (grouped by source) | `./04-scripts/manage-skills.sh list` |
+| Check health of skill symlinks and project-level links | `./04-scripts/manage-skills.sh check` |
 | Update the README skill list | `./04-scripts/manage-skills.sh update-readme` |
 
 ## Workflow
@@ -30,6 +31,8 @@ Parse the user's intent and map it to one of the following commands:
 
 - `02-agent-skills/` is flat: every skill entry is a symlink placed directly in that directory. Source classification (`superpowers`, `custom-skills`, etc.) is inferred from each symlink's target and used only for `list`/README grouping — there are no physical source subdirectories.
 - `add-custom` creates symlinks directly under `02-agent-skills/` with relative paths (`../03-custom-skills/<name>`).
+- `add` converts paths under `$HOME` to user-portable relative symlinks (e.g., `../../../AG-Tools/superpowers/skills/<name>`). This assumes the layout `~/Projects/Tiga/Skills` (this repo) and `~/Projects/AG-Tools`; paths outside `$HOME` stay absolute with a portability warning.
+- `check` verifies every symlink under `02-agent-skills/` (target resolvable, `SKILL.md` present) plus the project-level links `.claude/skills` / `.codex/skills` → `.agents/skills`, and exits non-zero if any link is broken.
 - `remove` looks up the symlink by name directly under `02-agent-skills/` — no need to specify the source category.
 - Both `add` and `remove` automatically run `update-readme` to refresh the skill list.
 - `update-readme` generates grouped skill tables with source descriptions, and includes project-level skills from `.agents/skills/`.

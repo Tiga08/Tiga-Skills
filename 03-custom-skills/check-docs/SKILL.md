@@ -1,18 +1,18 @@
 ---
 name: check-docs
-description: Check whether governance documents (README.md, CLAUDE.md, AGENTS.md) are up-to-date with actual repository state
-description_zh: 检查治理文档（README.md、CLAUDE.md、AGENTS.md）是否与仓库实际状态一致
+description: Check whether governance documents (README.md, CLAUDE.md, AGENTS.md, docs/) are up-to-date with actual repository state, and sync Chinese translations after fixes
+description_zh: 检查治理文档（README.md、CLAUDE.md、AGENTS.md、docs/）是否与仓库实际状态一致，并在修复后自动同步中文翻译
 ---
 
 Check whether governance documents are consistent with the actual repository state, and report actionable findings.
 
 **Arguments:** Optional flags may appear in the argument list.
 
-- `--scope <file>`: Limit the check to specific governance files (e.g., `--scope README.md`). May be repeated.
+- `--scope <file>`: Limit the check to specific governance files (e.g., `--scope README.md`, `--scope docs/guide.md`). May be repeated.
 - `--fix`: After reporting, apply fixes to the discovered issues directly. Use `AskUserQuestion` to confirm each fix before applying.
 - `--verbose`: Show `[OK]` entries for checks that pass.
 
-**No-argument behavior:** Scan the current repository root for governance documents (`README.md`, `CLAUDE.md`, `AGENTS.md`, and any `AGENTS.md` or `CLAUDE.md` in subdirectories). Run all phases against every governance file found.
+**No-argument behavior:** Scan the current repository root for governance documents (`README.md`, `CLAUDE.md`, `AGENTS.md`, any `AGENTS.md` or `CLAUDE.md` in subdirectories, and all `.md` files under `docs/`). The `docs/` directory may not exist; if absent, skip it silently without reporting an error. Run all phases against every governance file found.
 
 ## Workflow
 
@@ -20,7 +20,7 @@ Check whether governance documents are consistent with the actual repository sta
 
 Gather the raw inputs needed for all subsequent checks.
 
-1. **Locate governance documents.** Find all files matching `README.md`, `CLAUDE.md`, `AGENTS.md` (root and subdirectories). If `--scope` is set, keep only the specified files.
+1. **Locate governance documents.** Find all files matching `README.md`, `CLAUDE.md`, `AGENTS.md` (root and subdirectories), plus all `.md` files under `docs/` (skip silently if the directory does not exist). If `--scope` is set, keep only the specified files.
 2. **Capture the directory tree.** Run `find . -not -path './.git/*' -not -path './node_modules/*'` (or equivalent) to build the current file/directory listing. Respect `.gitignore` where practical.
 3. **Capture the git timeline.** For each governance document, run `git log -1 --format='%H %ai' -- <file>` to get its last-modified commit and date. Also collect the set of paths modified since that commit: `git diff --name-only <commit>..HEAD`.
 
@@ -114,3 +114,14 @@ Output all findings grouped by severity, then by source document.
 If `--fix` is set, iterate through findings in priority order. For each, show the proposed change and use `AskUserQuestion` to confirm before applying. Print a final summary of applied vs. skipped fixes.
 
 If `--verbose` is set, append a section listing all `[OK]` checks that passed.
+
+### Phase 6: Translation Sync
+
+Keep the Chinese translations of the root governance documents in step with applied fixes.
+
+**Trigger condition:** This run used `--fix` AND at least one fix was actually applied.
+
+- If triggered: invoke the `md-to-zh` skill via the Skill tool with the root `CLAUDE.md AGENTS.md` as arguments. Its incremental-update mode skips files that did not change, so this is cheap when only one of the two was fixed.
+- If not triggered (report-only mode, or `--fix` where every fix was skipped): skip this phase.
+
+Note the outcome of the translation sync (or that it was skipped) in the final output.
