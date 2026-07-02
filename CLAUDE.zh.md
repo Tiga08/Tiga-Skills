@@ -31,5 +31,6 @@
 ./04-scripts/manage-skills.sh add-custom <name>
 ./04-scripts/manage-skills.sh remove <name>
 ./04-scripts/manage-skills.sh list
+./04-scripts/manage-skills.sh check
 ./04-scripts/manage-skills.sh update-readme
 ```

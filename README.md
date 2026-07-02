@@ -19,7 +19,8 @@ Tiga-Skills/
 
 - **.agents/skills/** — 项目级技能，`.claude/skills` 和 `.codex/skills` 均为指向此目录的软链接。
 - **.claude/** / **.codex/** — Agent 项目配置目录，`skills` 均指向 `.agents/skills/`。
-- **02-agent-skills/** — 技能注册表，技能条目以软链接形式直接扁平存放在该目录下，来源分组仅体现在 README 技能清单中。
+- **01-prompts/** — 可复用的 Prompt 模板，部分含个人信息的模板仅存于本地、不入库（见 `.gitignore`）。
+- **02-agent-skills/** — 技能注册表，技能条目以软链接形式直接扁平存放在该目录下，来源分组仅体现在 README 技能清单中。外部技能软链接为用户级相对路径（如 `../../../AG-Tools/...`），要求 [AG-Tools](https://github.com/Tiga08/AG-Tools) 位于 `~/Projects/AG-Tools`、本仓库位于 `~/Projects/Tiga/Skills`。
 - **03-custom-skills/** — 存放项目内自定义技能的源文件，通过相对路径软链接注册到 `02-agent-skills/`。
 
 ## 安装
@@ -48,6 +49,9 @@ Tiga-Skills/
 
 # 列出已注册技能
 ./04-scripts/manage-skills.sh list
+
+# 检查技能软链接与项目级链接的健康状态
+./04-scripts/manage-skills.sh check
 
 # 更新 README 技能清单
 ./04-scripts/manage-skills.sh update-readme

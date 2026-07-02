@@ -14,10 +14,33 @@ README="$PROJECT_ROOT/README.md"
 
 die() { echo "错误: $1" >&2; exit 1; }
 
-# 从 SKILL.md frontmatter 提取字段值
+# 从 SKILL.md frontmatter 提取字段值（剥除成对的首尾引号）
 extract_field() {
-  local file="$1" field="$2"
-  sed -n '/^---$/,/^---$/p' "$file" | sed -n "s/^${field}: *//p" | head -1
+  local file="$1" field="$2" value
+  value="$(sed -n '/^---$/,/^---$/p' "$file" | sed -n "s/^${field}: *//p" | head -1)"
+  if [[ "$value" == \"*\" || "$value" == \'*\' ]]; then
+    value="${value:1:${#value}-2}"
+  fi
+  echo "$value"
+}
+
+# 将 $HOME 下的绝对路径转换为相对于 $SKILLS_DIR 的相对路径
+# 目的：软链接不写死用户名，仓库布局一致时可跨机器移植
+to_portable_target() {
+  local target="$1"
+  if [[ "$target" != "$HOME/"* ]]; then
+    echo "⚠ 目标不在 \$HOME 下，保留绝对路径（跨机器不可移植）: $target" >&2
+    echo "$target"
+    return
+  fi
+
+  # 从 $SKILLS_DIR 逐级向上找公共前缀，每上一级补一个 ..
+  local common="$SKILLS_DIR" up=""
+  while [[ "$target" != "$common/"* ]]; do
+    common="$(dirname "$common")"
+    up="../$up"
+  done
+  echo "${up}${target#"$common"/}"
 }
 
 # 从 descriptions-zh.conf 查找外部技能的中文描述覆盖
@@ -65,7 +88,11 @@ collect_skill_rows() {
 
     resolved="$(cd "$SKILLS_DIR" && cd "$target" 2>/dev/null && pwd)" || resolved=""
     desc=""
-    if [ -n "$resolved" ] && [ -f "$resolved/SKILL.md" ]; then
+    if [ -z "$resolved" ]; then
+      echo "⚠ 软链接目标无法解析: $name -> $target" >&2
+    elif [ ! -f "$resolved/SKILL.md" ]; then
+      echo "⚠ 缺少 SKILL.md: $name -> $target" >&2
+    else
       desc="$(extract_field "$resolved/SKILL.md" "description_zh")"
       [ -z "$desc" ] && desc="$(lookup_description_zh "$name")"
       [ -z "$desc" ] && desc="$(extract_field "$resolved/SKILL.md" "description")"
@@ -177,8 +204,12 @@ cmd_add() {
   local category
   category="$(classify_source "$source_path")"
 
-  ln -s "$source_path" "$link"
-  echo "✓ 已添加 ${name} -> ${source_path}（分类: ${category}）"
+  # 转换为可移植的相对路径后再创建软链接
+  local link_target
+  link_target="$(to_portable_target "$source_path")"
+
+  ln -s "$link_target" "$link"
+  echo "✓ 已添加 ${name} -> ${link_target}（分类: ${category}）"
   cmd_update_readme
 }
 
@@ -262,6 +293,62 @@ cmd_list() {
   fi
   echo ""
   echo "共 $total 个技能"
+}
+
+# ── check ──
+
+cmd_check() {
+  local ok=0 bad=0
+
+  echo "检查 02-agent-skills/ 技能软链接:"
+  local link
+  for link in "$SKILLS_DIR"/*; do
+    [ -L "$link" ] || continue
+    local name target resolved
+    name="$(basename "$link")"
+    target="$(readlink "$link")"
+    resolved="$(cd "$SKILLS_DIR" && cd "$target" 2>/dev/null && pwd)" || resolved=""
+
+    if [ -z "$resolved" ]; then
+      echo "  ✗ ${name} -> ${target}（目标无法解析）"
+      bad=$((bad + 1))
+    elif [ ! -f "$resolved/SKILL.md" ]; then
+      echo "  ✗ ${name} -> ${target}（缺少 SKILL.md）"
+      bad=$((bad + 1))
+    else
+      echo "  ✓ ${name} -> ${target}"
+      ok=$((ok + 1))
+    fi
+  done
+
+  echo ""
+  echo "检查项目级链接:"
+  local expected="$PROJECT_ROOT/.agents/skills"
+  local plink
+  for plink in "$PROJECT_ROOT/.claude/skills" "$PROJECT_ROOT/.codex/skills"; do
+    local label="${plink#"$PROJECT_ROOT"/}"
+    if [ ! -L "$plink" ]; then
+      echo "  ✗ ${label}（不是软链接）"
+      bad=$((bad + 1))
+      continue
+    fi
+    local ptarget presolved
+    ptarget="$(readlink "$plink")"
+    presolved="$(cd "$(dirname "$plink")" && cd "$ptarget" 2>/dev/null && pwd)" || presolved=""
+    if [ "$presolved" = "$expected" ]; then
+      echo "  ✓ ${label} -> ${ptarget}"
+      ok=$((ok + 1))
+    else
+      echo "  ✗ ${label} -> ${ptarget}（应指向 .agents/skills）"
+      bad=$((bad + 1))
+    fi
+  done
+
+  echo ""
+  echo "共检查 $((ok + bad)) 项：$ok 正常，$bad 失效"
+  if [ "$bad" -gt 0 ]; then
+    exit 1
+  fi
 }
 
 # ── update-readme ──
@@ -357,8 +444,9 @@ cmd_update_readme() {
     { print }
   ' "$README" > "$tmpfile"
 
-  mv "$tmpfile" "$README"
-  rm -f "$tablefile" "$rowsfile"
+  # 用 cat 覆写而非 mv，保留 README 原有文件权限
+  cat "$tmpfile" > "$README"
+  rm -f "$tmpfile" "$tablefile" "$rowsfile"
   echo "✓ README.md 技能清单已更新"
 }
 
@@ -373,6 +461,7 @@ case "$cmd" in
   add-custom)   cmd_add_custom "${1:-}" ;;
   remove)       cmd_remove "${1:-}" ;;
   list)         cmd_list ;;
+  check)        cmd_check ;;
   update-readme) cmd_update_readme ;;
   *)
     echo "用法: $0 <command> [args]"
@@ -383,6 +472,7 @@ case "$cmd" in
     echo "  add-custom <name>              从 03-custom-skills/ 添加技能到 02-agent-skills/"
     echo "  remove <name>                  按名称移除技能软链接"
     echo "  list                           按来源分组列出已注册技能"
+    echo "  check                          检查技能软链接与项目级链接的健康状态"
     echo "  update-readme                  更新 README.md 技能清单（按来源分组）"
     exit 1
     ;;
