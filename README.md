@@ -75,10 +75,10 @@ Tiga-Skills/
 
 | 名称 | 描述 |
 | ---- | ---- |
-| check-docs | 检查治理文档（README.md、CLAUDE.md、AGENTS.md）是否与仓库实际状态一致 |
+| check-docs | 检查治理文档（README.md、CLAUDE.md、AGENTS.md、docs/）是否与仓库实际状态一致，并在修复后自动同步中文翻译 |
 | gen-governance | 分析仓库结构并生成 AGENTS.md / CLAUDE.md 治理文件 |
 | manage-local-skills | 管理项目级 agent 技能 — 在当前项目的 .agents/skills/ 中初始化、导入、移除和列出技能 |
-| md-to-zh | 将英文 Markdown 文件翻译为简体中文 |
+| md-to-zh | 将英文 Markdown 文件翻译为简体中文，支持对已有译文按变动行增量更新 |
 | switch-commit-pr | 根据待提交的改动分阶段生成 git 分支切换 / commit / PR 命令，支持直接同步执行 |
 
 ### superpowers
