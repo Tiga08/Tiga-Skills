@@ -67,7 +67,7 @@ Tiga-Skills/
 
 | 名称 | 描述 |
 | ---- | ---- |
-| manage-global-skills | 管理全局 agent 技能注册表 — 在 Tiga-Skills 中添加、移除、列出技能，并按来源分组配置软链接 |
+| manage-global-skills | 通过 manage-skills.sh 管理 Tiga-Skills 全局技能注册表（02-agent-skills/）——配置用户级符号链接、添加外部或自定义技能、移除与列出条目、检查软链接健康并刷新 README 技能表。适用于在本仓库注册 / 移除全局共享技能或校验注册表链接状态；管理项目自身的 .agents/skills/ 请改用 manage-local-skills。 |
 
 ### custom-skills
 
@@ -75,11 +75,11 @@ Tiga-Skills/
 
 | 名称 | 描述 |
 | ---- | ---- |
-| check-docs | 检查治理文档（README.md、CLAUDE.md、AGENTS.md、docs/）是否与仓库实际状态一致，并在修复后自动同步中文翻译 |
-| gen-governance | 分析仓库结构并生成 AGENTS.md / CLAUDE.md 治理文件 |
-| manage-local-skills | 管理项目级 agent 技能 — 在当前项目的 .agents/skills/ 中初始化、导入、移除和列出技能 |
-| md-to-zh | 将英文 Markdown 文件翻译为简体中文，支持对已有译文按变动行增量更新 |
-| switch-commit-pr | 根据待提交的改动分阶段生成 git 分支切换 / commit / PR 命令，支持直接同步执行 |
+| check-docs | 对照仓库实际状态审计治理文档（README.md、CLAUDE.md、AGENTS.md、docs/），报告失效路径、未记录内容、过期引用与文档间矛盾；--fix 可交互式应用修复并同步治理文件的中文翻译。适用于代码或目录结构变更后怀疑文档过期，或在提交 / PR 前核对文档准确性。 |
+| gen-governance | 分析仓库结构，基于仓库实际证据生成根目录及子目录的 AGENTS.md / CLAUDE.md 治理文件，覆盖时合并仍然有效的旧规则，随后调用 md-to-zh 同步中文翻译。适用于仓库尚无治理文件、或大规模重构后需要重新生成的场景；若要审计现有文档与仓库是否一致，请改用 check-docs。 |
+| manage-local-skills | 初始化、导入、移除和列出当前项目 .agents/skills/ 中的项目级技能，通过 .claude/skills 与 .codex/skills 符号链接供 Claude Code 和 Codex 共享。适用于搭建项目技能目录或只为当前项目导入 / 移除技能。 |
+| md-to-zh | 将英文 Markdown 文件或目录翻译为简体中文，逐行保留文档结构；已有译文仅按变动行增量更新，未变更的文件零成本跳过。治理文件（AGENTS.md / CLAUDE.md）在源文件旁生成 .zh.md，其余文件输出到 agent-plan/translations/。适用于为任何 Markdown 文档新建或刷新中文版本。 |
+| switch-commit-pr | 分析待提交的 git 改动并按模式生成可直接运行的命令：switch（创建分支）、commit（追加 Conventional Commits 提交）、pr（追加 push 与 gh pr create）；默认仅打印命令，--execute 时直接执行。适用于工作区改动就绪后，需要从当前状态生成或执行分支 / 提交 / PR 命令的场景。 |
 
 ### superpowers
 
