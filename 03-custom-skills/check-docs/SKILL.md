@@ -1,7 +1,7 @@
 ---
 name: check-docs
-description: Check whether governance documents (README.md, CLAUDE.md, AGENTS.md, docs/) are up-to-date with actual repository state, and sync Chinese translations after fixes
-description_zh: 检查治理文档（README.md、CLAUDE.md、AGENTS.md、docs/）是否与仓库实际状态一致，并在修复后自动同步中文翻译
+description: Audit governance docs (README.md, CLAUDE.md, AGENTS.md, docs/) against actual repository state, reporting phantom paths, undocumented content, stale references, and cross-document contradictions; with --fix, interactively apply fixes and sync Chinese translations of governance files. Use when docs may have drifted after code or structure changes, or to verify documentation accuracy before a commit or PR.
+description_zh: 对照仓库实际状态审计治理文档（README.md、CLAUDE.md、AGENTS.md、docs/），报告失效路径、未记录内容、过期引用与文档间矛盾；--fix 可交互式应用修复并同步治理文件的中文翻译。适用于代码或目录结构变更后怀疑文档过期，或在提交 / PR 前核对文档准确性。
 ---
 
 Check whether governance documents are consistent with the actual repository state, and report actionable findings.
@@ -9,7 +9,7 @@ Check whether governance documents are consistent with the actual repository sta
 **Arguments:** Optional flags may appear in the argument list.
 
 - `--scope <file>`: Limit the check to specific governance files (e.g., `--scope README.md`, `--scope docs/guide.md`). May be repeated.
-- `--fix`: After reporting, apply fixes to the discovered issues directly. Use `AskUserQuestion` to confirm each fix before applying.
+- `--fix`: After reporting, apply fixes to the discovered issues (Phase 6) and sync governance-file translations (Phase 7).
 - `--verbose`: Show `[OK]` entries for checks that pass.
 
 **No-argument behavior:** Scan the current repository root for governance documents (`README.md`, `CLAUDE.md`, `AGENTS.md`, any `AGENTS.md` or `CLAUDE.md` in subdirectories, and all `.md` files under `docs/`). The `docs/` directory may not exist; if absent, skip it silently without reporting an error. Run all phases against every governance file found.
@@ -111,17 +111,28 @@ Output all findings grouped by severity, then by source document.
 
 **Priority order for suggested fixes:** `[PHANTOM]` > `[MISSING]` > `[STALE]` > `[MISMATCH]`.
 
-If `--fix` is set, iterate through findings in priority order. For each, show the proposed change and use `AskUserQuestion` to confirm before applying. Print a final summary of applied vs. skipped fixes.
-
 If `--verbose` is set, append a section listing all `[OK]` checks that passed.
 
-### Phase 6: Translation Sync
+### Phase 6: Fix Application
 
-Keep the Chinese translations of the root governance documents in step with applied fixes.
+Apply the reported fixes interactively.
 
-**Trigger condition:** This run used `--fix` AND at least one fix was actually applied.
+**Trigger condition:** `--fix` is set AND there is at least one finding. If not triggered, print why this phase is skipped (no `--fix`, or no findings) and continue to Phase 7.
 
-- If triggered: invoke the `md-to-zh` skill via the Skill tool with the root `CLAUDE.md AGENTS.md` as arguments. Its incremental-update mode skips files that did not change, so this is cheap when only one of the two was fixed.
-- If not triggered (report-only mode, or `--fix` where every fix was skipped): skip this phase.
+1. Iterate through findings in priority order (`[PHANTOM]` > `[MISSING]` > `[STALE]` > `[MISMATCH]`).
+2. For each finding, show the proposed change, then confirm via `AskUserQuestion` with four options: apply this fix / skip this fix / apply all remaining / skip all remaining. Once an "all remaining" option is chosen, stop asking per item and apply (or skip) every remaining finding accordingly.
+3. **Record the list of files actually modified in this phase** — Phase 7 takes it as input.
+4. Print a final summary of applied vs. skipped fixes.
+
+### Phase 7: Translation Sync
+
+Keep the Chinese translations of governance documents in step with applied fixes.
+
+**Trigger condition:** This run used `--fix` AND at least one fix was actually applied. If not triggered (report-only mode, or `--fix` where every fix was skipped), print why this phase is skipped.
+
+1. From Phase 6's modified-file list, select the governance files: any `CLAUDE.md` or `AGENTS.md`, at any directory level (root or subdirectories).
+2. If the selection is non-empty: invoke the `md-to-zh` skill via the Skill tool, passing those file paths as arguments. Its incremental-update mode skips unchanged files, so this stays cheap.
+3. Do NOT pass `README.md` or `docs/` files even if they were fixed — their translations land in `agent-plan/translations/`, which is git-ignored, so syncing them has no lasting effect.
+4. If the modified-file list contains no governance files, print that as the skip reason.
 
 Note the outcome of the translation sync (or that it was skipped) in the final output.

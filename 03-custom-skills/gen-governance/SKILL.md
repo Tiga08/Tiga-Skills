@@ -1,39 +1,29 @@
 ---
 name: gen-governance
-description: Analyze a repository and generate AGENTS.md / CLAUDE.md governance files for AI agent operation
-description_zh: 分析仓库结构并生成 AGENTS.md / CLAUDE.md 治理文件
+description: Analyze repository structure and generate AGENTS.md / CLAUDE.md governance files (root and subdirectories) grounded in actual repo evidence, merging still-valid rules when overwriting, then invoke md-to-zh to sync Chinese translations. Use when a repository has no governance files or needs them regenerated after major restructuring; to audit existing docs against reality, use check-docs instead.
+description_zh: 分析仓库结构，基于仓库实际证据生成根目录及子目录的 AGENTS.md / CLAUDE.md 治理文件，覆盖时合并仍然有效的旧规则，随后调用 md-to-zh 同步中文翻译。适用于仓库尚无治理文件、或大规模重构后需要重新生成的场景；若要审计现有文档与仓库是否一致，请改用 check-docs。
 ---
 
-Analyze the current repository and generate governance files (`AGENTS.md` and `CLAUDE.md`) so that AI agents can understand and operate correctly within the project.
+Analyze the current repository and generate governance files (`AGENTS.md` and `CLAUDE.md`) so that AI agents can understand and operate correctly within the project. After writing, invoke the `md-to-zh` skill to keep Chinese translations in sync.
 
 **Arguments:** Optional flags may appear in the argument list.
 
-- `--dry-run`: Perform the repository analysis and show what files would be generated, without writing anything.
+- `--dry-run`: Run Phase 1 only — print the analysis summary and generation plan (including conflict annotations), write nothing, then stop.
 - `--force`: Overwrite all existing governance files without conflict prompts.
+- `--no-translate`: Skip Phase 4 (translation sync).
 
 **No-argument behavior:** Analyze the current project root directory and generate governance files for it.
 
-**Conflict handling:**
-- If `--force` is set, overwrite all existing governance files without prompting.
-- If `--dry-run` is set, list what would be generated (including conflicts) without writing.
-- Otherwise, if a target file already exists, use `AskUserQuestion` to ask the user:
-  - Overwrite this file
-  - Skip this file
-  - Overwrite all remaining conflicts
-  - Skip all remaining conflicts
-
-Apply the chosen action accordingly.
-
 ## Workflow
 
-### Phase 1: Repository Analysis
+### Phase 1: Repository Analysis & Generation Plan
 
-Before generating any files, inspect the repository and output a brief analysis summary.
+Inspect the repository, decide exactly which files will be generated, and resolve all conflicts before any writing happens.
 
-Required analysis:
+**1. Analyze the repository:**
 
 - List the top two levels of the directory tree.
-- Read the `README` and any existing configuration or governance files, including existing `AGENTS.md`, `CLAUDE.md`, or agent-related files.
+- Read the `README` and any existing configuration or governance files, including existing `AGENTS.md`, `CLAUDE.md`, or agent-related files. Keep the content of existing governance files — Phase 2 merges their still-valid rules into the new files.
 - Identify the repository type: application, library, monorepo, content repository, or other.
 - Identify the main functional layers of the project.
 - Determine which top-level directories need their own `CLAUDE.md`.
@@ -42,29 +32,33 @@ Criterion for subdirectory `CLAUDE.md`:
 
 > Generate a subdirectory `CLAUDE.md` only when that directory has ownership semantics, modification rules, or operational constraints that differ from the repository root.
 
-Print the analysis summary before proceeding to generation.
+**2. Build the generation plan:** List every target file in generation order — `AGENTS.md`, root `CLAUDE.md`, then each subdirectory `CLAUDE.md`. Mark each target that already exists as a conflict. The plan's file count is the initial total N.
 
-### Phase 2: Generate `AGENTS.md`
+**3. Resolve conflicts:**
 
-Generate `AGENTS.md` at the project root following the template in the [AGENTS.md Template](#agentsmd-template) section. Tailor all content to the actual repository structure, files, and observable conventions. Do not fabricate rules.
+- If `--force` is set: mark every conflicting target as "overwrite"; no prompts.
+- If `--dry-run` is set: print the analysis summary and the generation plan with conflict annotations, then **stop here** — no files are written and no later phase runs.
+- Otherwise, for each conflicting target, ask via `AskUserQuestion`:
+  - Overwrite this file
+  - Skip this file
+  - Overwrite all remaining conflicts
+  - Skip all remaining conflicts
 
-Print: `[1/N] Generating AGENTS.md ...`
+  An "all remaining" choice applies to every subsequent conflict without further prompting. Remove each skipped file from the generation plan and reduce N accordingly; record it (with reason "skipped by user") for the final summary.
 
-### Phase 3: Generate Root `CLAUDE.md`
+**4. Print** the analysis summary and the final generation plan (the N files that will actually be written) before entering Phase 2.
 
-Generate the root `CLAUDE.md` following the template in the [Root CLAUDE.md Template](#root-claudemd-template) section.
+### Phase 2: Generate Files
 
-Print: `[2/N] Generating CLAUDE.md ...`
+Generate the planned files in order: `AGENTS.md` → root `CLAUDE.md` → each subdirectory `CLAUDE.md`. Before each file, print `[k/N] Generating <path> ...`, where k increments globally across all files and N is the final count from Phase 1.
 
-### Phase 4: Generate Subdirectory `CLAUDE.md` Files
+- Use the corresponding template from the [Templates](#templates) section for each file.
+- Every rule must derive from the actual repository structure, files, and observable conventions. Do not fabricate rules.
+- **When overwriting an existing file, merge instead of discarding:** carry over rules from the old file that are still valid and not already covered by the newly generated content. Drop only rules that contradict the current repository state.
 
-Generate subdirectory `CLAUDE.md` files only for directories identified as necessary in Phase 1. Use the template in the [Subdirectory CLAUDE.md Template](#subdirectory-claudemd-template) section.
+### Phase 3: Quality Self-Check
 
-Print: `[3/N] Generating <dir>/CLAUDE.md ...` for each subdirectory file.
-
-### Phase 5: Quality Self-Check
-
-After generating all files, verify the result against this checklist:
+Verify the generated files against this checklist and print each item with pass/fail status:
 
 - [ ] **No duplication** — `AGENTS.md` and `CLAUDE.md` do not repeat the same descriptions unnecessarily.
 - [ ] **Dangerous operations are covered** — the `Never` section lists the repository's most critical prohibitions.
@@ -72,15 +66,25 @@ After generating all files, verify the result against this checklist:
 - [ ] **Subdirectory rules are specific** — each subdirectory `CLAUDE.md` contains at least one constraint absent from the root.
 - [ ] **Instruction priority is clear** — conflicts between user instructions, subdirectory rules, and root rules are resolved by the stated priority order.
 
-Print the checklist with pass/fail status.
+Any failed item must be fixed (edit the affected file, then re-check) before proceeding to Phase 4.
 
-### Output Summary
+### Phase 4: Translation Sync
 
-When done, print a final summary:
+Keep Chinese translations of the generated governance files in step with this run.
+
+**Trigger condition:** at least one governance file was actually written in Phase 2, AND `--no-translate` is not set.
+
+- If triggered: invoke the `md-to-zh` skill via the Skill tool, passing the paths of all governance files written this run (including subdirectory `CLAUDE.md` files) as arguments. md-to-zh writes governance-file translations as `.zh.md` next to each source, and its incremental mode skips files that did not change.
+- If not triggered: print the reason explicitly (`--no-translate` set, or no files were written).
+
+### Phase 5: Output Summary
+
+Print a final summary:
 
 - Files generated (with paths)
 - Files skipped (with reason)
 - Files that failed (if any)
+- Translation results per file: new translation / incremental update / skipped (or the reason Phase 4 was skipped)
 
 ---
 
@@ -150,6 +154,7 @@ Focus on:
 1. Explicit user instructions
 2. Subdirectory `CLAUDE.md` rules
 3. This `AGENTS.md`
+4. Evidence from repository files and existing style conventions
 ```
 
 ### Root CLAUDE.md Template
