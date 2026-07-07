@@ -1,7 +1,7 @@
 ---
 name: manage-local-skills
-description: Init, add, remove, and list project-level skills in the current project's .agents/skills/, shared with Claude Code and Codex via .claude/skills and .codex/skills symlinks. Use when setting up a project's skill directory or importing/removing skills for that project only; for the Tiga-Skills global registry (02-agent-skills/), use manage-global-skills.
-description_zh: 初始化、导入、移除和列出当前项目 .agents/skills/ 中的项目级技能，通过 .claude/skills 与 .codex/skills 符号链接供 Claude Code 和 Codex 共享。适用于搭建项目技能目录或只为当前项目导入 / 移除技能；管理 Tiga-Skills 全局注册表（02-agent-skills/）请改用 manage-global-skills。
+description: Init, add, update, remove, and list project-level skills in the current project's .agents/skills/, shared with Claude Code and Codex via .claude/skills and .codex/skills symlinks. Use when setting up a project's skill directory or importing/updating/removing skills for that project only; for the Tiga-Skills global registry (02-agent-skills/), use manage-global-skills.
+description_zh: 初始化、导入、更新、移除和列出当前项目 .agents/skills/ 中的项目级技能，通过 .claude/skills 与 .codex/skills 符号链接供 Claude Code 和 Codex 共享。适用于搭建项目技能目录或只为当前项目导入 / 更新 / 移除技能；管理 Tiga-Skills 全局注册表（02-agent-skills/）请改用 manage-global-skills。
 ---
 
 Manage the `.agents/skills/` directory in the current project. Skills placed here are exposed to Claude Code and Codex via `.claude/skills` and `.codex/skills` symlinks.
@@ -10,11 +10,12 @@ Manage the `.agents/skills/` directory in the current project. Skills placed her
 
 - Positional operation (required, one of):
   - `init` — create `.agents/skills/`, set up `.claude/skills` and `.codex/skills` symlinks, migrate existing skills if needed.
-  - `add <path> [--name <name>] [--link]` — copy a skill directory into `.agents/skills/<name>/` (use `--link` for a symlink instead).
+  - `add <path> [--name <name>] [--link]` — copy a skill directory into `.agents/skills/<name>/` and record its source path in `.skill-source` (use `--link` for a symlink instead).
+  - `update [<name>] [<path>]` — re-copy a copied skill from its recorded source (`.skill-source`); without `<name>`, batch-update all copied entries.
   - `remove <name>` — delete `.agents/skills/<name>` (directory or symlink).
   - `list` — scan `.agents/skills/` and display each skill's name, type, and description.
 
-**No-argument behavior:** If the operation argument is missing or not one of the four above, do not guess. Use `AskUserQuestion` to let the user choose among `init` / `add` / `remove` / `list`, then collect any missing required arguments (source path for `add`, skill name for `remove`).
+**No-argument behavior:** If the operation argument is missing or not one of the five above, do not guess. Use `AskUserQuestion` to let the user choose among `init` / `add` / `update` / `remove` / `list`, then collect any missing required arguments (source path for `add`, skill name for `remove`).
 
 ## Available Operations
 
@@ -23,7 +24,8 @@ Parse the user's intent and map it to one of the following operations:
 | Intent | Operation |
 | ------ | --------- |
 | Initialize project skill directory | `init` — create `.agents/skills/`, set up `.claude/skills` and `.codex/skills` symlinks, migrate existing skills if needed |
-| Import a skill | `add <path> [--name <name>] [--link]` — copy a skill directory into `.agents/skills/<name>/` (use `--link` for symlink instead) |
+| Import a skill | `add <path> [--name <name>] [--link]` — copy a skill directory into `.agents/skills/<name>/` and record its source in `.skill-source` (use `--link` for symlink instead) |
+| Update imported skills | `update [<name>] [<path>]` — re-copy from the recorded source; without `<name>`, batch-update all copied entries |
 | Remove a skill | `remove <name>` — delete `.agents/skills/<name>` |
 | List installed skills | `list` — scan `.agents/skills/` and display names, types, and descriptions |
 
@@ -52,12 +54,13 @@ Dispatch to the matching section under **Operation Details**.
 - `remove` — always confirm, after showing the entry type.
 - `init` — confirm before migrating (Scenario B) or replacing (Scenario C).
 - `add` — confirm only on a name conflict.
+- `update` — overwrites the copied entry: confirm once per single update; in batch mode, show the update plan list and confirm once for the whole batch.
 
 `list` and a conflict-free `add` execute directly without confirmation.
 
 ### Phase 3: Report
 
-Summarize the outcome for each path or entry touched (done / skipped / migrated / replaced / removed). After `init`, remind the user to add `.agents/` to version control (`git add .agents/`).
+Summarize the outcome for each path or entry touched (done / skipped / migrated / replaced / updated / removed). After `init`, remind the user to add `.agents/` to version control (`git add .agents/`).
 
 ## Operation Details
 
@@ -125,10 +128,11 @@ Summarize what was done for each path (skipped / created / migrated / replaced).
 Import a skill directory into `.agents/skills/<name>/`.
 
 ```bash
-# Default: copy (project is self-contained)
+# Default: copy (project is self-contained), then record the source path for later update
 cp -R <source-path> .agents/skills/<name>
+printf '%s\n' "$(cd <source-path> && pwd)" > .agents/skills/<name>/.skill-source
 
-# --link: symlink (tracks upstream updates)
+# --link: symlink (tracks upstream updates; no .skill-source needed)
 ln -s <absolute-source-path> .agents/skills/<name>
 ```
 
@@ -140,6 +144,37 @@ ln -s <absolute-source-path> .agents/skills/<name>
 **Validation:**
 - Source directory must contain `SKILL.md`; error otherwise.
 - Target `.agents/skills/<name>/` must not already exist. On conflict, ask via `AskUserQuestion` with three options: overwrite the existing entry, import under a different name, or cancel.
+
+### update
+
+Re-copy copied skills from their recorded upstream source. Symlinked entries track upstream automatically and cannot (and need not) be updated.
+
+**Single update — `update <name> [<path>]`:**
+
+1. Entry must exist under `.agents/skills/`; error otherwise.
+2. If the entry is a symlink → tell the user it tracks upstream automatically and needs no update, then stop.
+3. Resolve the source path:
+   - Explicit `<path>` argument takes precedence.
+   - Otherwise read `.agents/skills/<name>/.skill-source`.
+   - If the record is missing (e.g., copied before this feature existed) or the recorded path no longer exists → ask the user for the source path via `AskUserQuestion`.
+4. Validate the source: must exist and contain `SKILL.md`.
+5. Confirm, then execute:
+
+```bash
+src=<resolved-source-path>
+rm -rf .agents/skills/<name>
+cp -R "$src" .agents/skills/<name>
+printf '%s\n' "$src" > .agents/skills/<name>/.skill-source
+```
+
+**Batch update — `update` with no name:**
+
+1. Scan `.agents/skills/*/` and classify each entry:
+   - Symlink → skip, note "symlink, tracks upstream automatically".
+   - Copied entry with a valid `.skill-source` → to update.
+   - Copied entry with no record, or whose recorded source is missing / lacks `SKILL.md` → skip, note the reason (batch mode never prompts per entry).
+2. Show the plan list (name → source / skip reason) and confirm once via `AskUserQuestion`.
+3. Execute the single-update steps for each entry to update; report per-entry results (updated / skipped + reason).
 
 ### remove
 
@@ -182,6 +217,7 @@ Output as a table. Type is `copy` for a regular directory, or `symlink → <targ
 
 - After `init`, remind the user to version-control `.agents/` (`git add .agents/`).
 - `add` copies by default for self-containment. Use `--link` to track upstream updates.
+- `.skill-source` inside a copied entry records its upstream source path (absolute, one line) for `update`. The path is machine-specific; if it becomes invalid (e.g., after moving to another machine), `update` falls back to asking for the source path and rewrites the record.
 - `--link` creates an absolute-path symlink, which is machine-specific and does not survive moving the project to another machine; use the default copy when portability matters.
 - `.claude/skills` and `.codex/skills` are symlinks — edit skills in `.agents/skills/`, not through the symlinks.
 - This skill runs shell commands directly; it does not depend on any external scripts.
