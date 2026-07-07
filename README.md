@@ -77,7 +77,7 @@ Tiga-Skills/
 | ---- | ---- |
 | check-docs | 对照仓库实际状态审计治理文档（README.md、CLAUDE.md、AGENTS.md、docs/），报告失效路径、未记录内容、过期引用与文档间矛盾；--fix 可交互式应用修复并同步治理文件的中文翻译。适用于代码或目录结构变更后怀疑文档过期，或在提交 / PR 前核对文档准确性。 |
 | gen-governance | 分析仓库结构，基于仓库实际证据生成根目录及子目录的 AGENTS.md / CLAUDE.md 治理文件，覆盖时合并仍然有效的旧规则，随后调用 md-to-zh 同步中文翻译。适用于仓库尚无治理文件、或大规模重构后需要重新生成的场景；若要审计现有文档与仓库是否一致，请改用 check-docs。 |
-| manage-local-skills | 初始化、导入、移除和列出当前项目 .agents/skills/ 中的项目级技能，通过 .claude/skills 与 .codex/skills 符号链接供 Claude Code 和 Codex 共享。适用于搭建项目技能目录或只为当前项目导入 / 移除技能。 |
+| manage-local-skills | 初始化、导入、更新、移除和列出当前项目 .agents/skills/ 中的项目级技能，通过 .claude/skills 与 .codex/skills 符号链接供 Claude Code 和 Codex 共享。适用于搭建项目技能目录或只为当前项目导入 / 更新 / 移除技能；管理 Tiga-Skills 全局注册表（02-agent-skills/）请改用 manage-global-skills。 |
 | md-to-zh | 将英文 Markdown 文件或目录翻译为简体中文，逐行保留文档结构；已有译文仅按变动行增量更新，未变更的文件零成本跳过。治理文件（AGENTS.md / CLAUDE.md）在源文件旁生成 .zh.md，其余文件输出到 agent-plan/translations/。适用于为任何 Markdown 文档新建或刷新中文版本。 |
 | switch-commit-pr | 分析待提交的 git 改动并按模式生成可直接运行的命令：switch（创建分支）、commit（追加 Conventional Commits 提交）、pr（追加 push 与 gh pr create）；默认仅打印命令，--execute 时直接执行。基准分支为 main/master/dev；处于其他分支时交互式询问是切出新分支还是留在当前分支继续（pr 模式工作区干净时直接续跑）。感知预暂存状态，明确独立的变更自动拆分为多个 commit，PR 指向本次运行的基准分支，绝不删除或恢复工作区文件。适用于工作区改动就绪后，需要从当前状态生成或执行分支 / 提交 / PR 命令的场景。 |
 
