@@ -81,25 +81,4 @@ Tiga-Skills/
 | md-to-zh | 将英文 Markdown 文件或目录翻译为简体中文，逐行保留文档结构；已有译文仅按变动行增量更新，未变更的文件零成本跳过。治理文件（AGENTS.md / CLAUDE.md）在源文件旁生成 .zh.md，其余文件输出到 agent-plan/translations/。适用于为任何 Markdown 文档新建或刷新中文版本。 |
 | switch-commit-pr | 分析待提交的 git 改动并按模式生成可直接运行的命令：switch（创建分支）、commit（追加 Conventional Commits 提交）、pr（追加 push 与 gh pr create）；默认仅打印命令，--execute 时直接执行。基准分支为 main/master/dev；处于其他分支时交互式询问是切出新分支还是留在当前分支继续（pr 模式工作区干净时直接续跑）。感知预暂存状态，明确独立的变更自动拆分为多个 commit，PR 指向本次运行的基准分支，绝不删除或恢复工作区文件。适用于工作区改动就绪后，需要从当前状态生成或执行分支 / 提交 / PR 命令的场景。 |
 
-### superpowers
-
-来源于 [AG-Tools/superpowers](https://github.com/Tiga08/AG-Tools)
-
-| 名称 | 描述 |
-| ---- | ---- |
-| brainstorming | 在任何创意工作前使用 — 探索用户意图、需求和设计，再进行功能创建、组件构建或行为修改 |
-| dispatching-parallel-agents | 面对 2 个以上无共享状态或顺序依赖的独立任务时使用 |
-| executing-plans | 在独立会话中按审查检查点执行已编写的实施计划 |
-| finishing-a-development-branch | 实现完成且测试通过后，指导选择合并、PR 或清理等完成方式 |
-| receiving-code-review | 收到代码审查反馈后、实施建议前使用 — 要求技术严谨性和验证，拒绝盲目同意 |
-| requesting-code-review | 完成任务、实现主要功能或合并前使用，请求代码审查以验证工作质量 |
-| subagent-driven-development | 在当前会话中使用子 agent 执行包含独立任务的实施计划 |
-| systematic-debugging | 遇到 bug、测试失败或意外行为时，在提出修复方案前使用 |
-| test-driven-development | 实现功能或修复 bug 时，在编写实现代码前使用 |
-| using-git-worktrees | 需要隔离工作区的功能开发或执行实施计划前使用 — 通过原生工具或 git worktree 确保隔离 |
-| using-superpowers | 每次对话开始时使用 — 建立技能发现和使用方式，要求在任何响应前先调用技能 |
-| verification-before-completion | 声称工作完成或通过之前使用 — 要求先运行验证命令并确认输出，再声明成功 |
-| writing-plans | 有多步骤任务的规格或需求时，在编写代码之前使用 |
-| writing-skills | 创建、编辑或部署前验证技能时使用 |
-
 <!-- END SKILL LIST -->
