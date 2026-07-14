@@ -109,7 +109,7 @@ Print a final summary:
 ## Markdown Generation
 
 - Create Markdown files only when explicitly requested.
-- Save generated Markdown under `agent-plan/` unless the user specifies another path; create the directory if it does not exist.
+- Save generated Markdown under `.tiga/agent-res/markdown/` unless the user specifies another path; create the directory if it does not exist.
 - Name generated Markdown files `YYYY-MM-DD_{purpose}.md`.
 - Exceptions:
   - Translations stay beside their source file.

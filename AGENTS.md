@@ -13,19 +13,24 @@ Tiga-Skills is a content and script repository that centrally registers external
 | `02-agent-skills/` | Flat Agent Skills registry; skill entries are symlinks placed directly in this directory, grouping by source is shown only in README | derived |
 | `03-custom-skills/` | Source files for project-internal custom skills | primary |
 | `04-scripts/` | Scripts for skill registration, removal, setup, link health checks, and README updates | primary |
-| `agent-plan/` | Agent-generated plans and drafts; git-ignored | derived |
-| `Todo/` | Local to-dos and working notes; git-ignored | derived |
+| `.tiga/` | Git-ignored user-local workspace; Agent output lives under `agent-res/`, personal plans live in `Todo.md`, and future local modules may be added here | derived |
 
 Only root-level governance files are maintained. Do not generate subdirectory `CLAUDE.md` files unless the user explicitly requests it.
 
 ## Markdown Generation
 
 - Only create Markdown files when explicitly requested by the user.
-- Unless the user specifies another path, save generated Markdown under `agent-plan/`; create the directory if it does not exist.
+- Unless the user specifies another path, save generated Markdown under `.tiga/agent-res/markdown/`; create the directory if it does not exist.
 - Name generated Markdown files `YYYY-MM-DD_{purpose}.md`.
 - Exceptions:
-  - Translation files follow the md-to-zh skill's output rules: governance files (`AGENTS.md`, `CLAUDE.md`) are translated as `.zh.md` next to the source; all other files are output to `agent-plan/translations/`.
+  - Translation files follow the md-to-zh skill's output rules: governance files (`AGENTS.md`, `CLAUDE.md`) are translated as `.zh.md` next to the source; all other files are output to `.tiga/translations/`.
   - Project governance files such as `CLAUDE.md`, `AGENTS.md`, `README.md`, and `CHANGELOG.md` stay at their conventional locations.
+
+## User-local Workspace
+
+- Treat `.tiga/` as the single entry point for user-related local files; the entire directory is excluded by `.gitignore`.
+- Store personal plans and to-dos in `.tiga/Todo.md`.
+- Add future user-local modules as new files or subdirectories directly under `.tiga/`; document shared conventions here when they affect Agent behavior.
 
 ## Skills
 
@@ -74,5 +79,6 @@ Only root-level governance files are maintained. Do not generate subdirectory `C
 
 1. Explicit user instructions
 2. This `AGENTS.md`
-3. Evidence from the current repository files and directory structure
-4. Existing style and conventions
+3. Root `CLAUDE.md` operational guidance, when it does not conflict with this file
+4. Evidence from the current repository files and directory structure
+5. Existing style and conventions
