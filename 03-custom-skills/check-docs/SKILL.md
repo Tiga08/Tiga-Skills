@@ -132,7 +132,7 @@ Keep the Chinese translations of governance documents in step with applied fixes
 
 1. From Phase 6's modified-file list, select the governance files: any `CLAUDE.md` or `AGENTS.md`, at any directory level (root or subdirectories).
 2. If the selection is non-empty: invoke the `md-to-zh` skill via the Skill tool, passing those file paths as arguments. Its incremental-update mode skips unchanged files, so this stays cheap.
-3. Do NOT pass `README.md` or `docs/` files even if they were fixed — their translations land in `.tiga/translationss git-ignored, so syncing them has no lasting effect.
+3. Do NOT pass `README.md` or `docs/` files even if they were fixed — their translations land in `.tiga/translations/`, which is git-ignored, so syncing them has no lasting effect.
 4. If the modified-file list contains no governance files, print that as the skip reason.
 
 Note the outcome of the translation sync (or that it was skipped) in the final output.
