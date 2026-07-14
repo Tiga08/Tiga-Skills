@@ -4,22 +4,21 @@
 
 ## Constraints
 
-- This repository is an Agent Skills management repo, not an application or library. Do not add build systems, runtime dependencies, or application frameworks unless the user explicitly requests it.
-- Skill entries directly under `02-agent-skills/` must remain symlinks (flat, no source subdirectories). Do not place regular skill directories there or directly edit symlink targets.
-- Project-level skills (for operating this repository) live in `.agents/skills/`. `.claude/skills` and `.codex/skills` are symlinks pointing there.
-- Registry skill source files live in `03-custom-skills/`. When modifying registry skills, work in the source directory, then run `./04-scripts/manage-skills.sh update-readme` to refresh documentation.
-- External skills are maintained by upstream repositories. Check upstream status before syncing external skills, and only pull or register changes after user confirmation.
-- Scripts use Bash and UTF-8. Write new or modified script comments in Simplified Chinese, and maintain the existing direct, executable script style.
+- Preserve this repository as a content-and-Bash management repository. Do not introduce an application framework, build system, or runtime dependency unless the user explicitly requests it.
+- Edit each skill at its authoritative location: project-operation skills in `.agents/skills/`, custom registry skills in `03-custom-skills/`, and external skills in their upstream repositories. Treat `02-agent-skills/` as derived state.
+- Use `./04-scripts/manage-skills.sh` for registry and user-level link operations. After registry or skill-metadata changes, run `update-readme`, then `check`.
+- Inspect external upstream status before proposing a sync, and obtain user confirmation before pulling or registering upstream changes.
+- Keep scripts executable Bash encoded as UTF-8, follow the existing direct command style, and write new or changed script comments in Simplified Chinese. Run `bash -n` on modified shell scripts before finishing.
 
 ## Common Gotchas
 
-1. **Treating `02-agent-skills/` as a source directory.** It is a flat symlink registry; source classification is inferred by resolving each symlink's target and shown only in README grouping — there are no physical source subdirectories. To modify registry skills, edit `03-custom-skills/`. For external skills, go to the upstream repository. Project-level skills live in `.agents/skills/`, not here.
+1. **Confusing the three skill locations.** `.agents/skills/` contains project-operation skills, `03-custom-skills/` contains custom registry sources, and `02-agent-skills/` contains only flat registration symlinks. Resolve a registry link before deciding which source is safe to edit.
 
-2. **Bypassing `manage-skills.sh` for symlink management.** Manually creating or deleting symlinks causes the README skill list to diverge from actual registration state. Use `./04-scripts/manage-skills.sh` for adding, removing, setup, and list updates.
+2. **Bypassing `manage-skills.sh` for symlink management.** Manual link changes can leave registration, user-level discovery, and README metadata inconsistent. Use the management script for `setup`, `add`, `add-custom`, and `remove`.
 
-3. **Forgetting to update the README skill list.** After skill changes, run `./04-scripts/manage-skills.sh update-readme`. This command scans symlinks directly under `02-agent-skills/`, inferring each entry's category by resolving its symlink target, and extracts metadata from each `SKILL.md`.
+3. **Editing the generated README skill table by hand.** The section between `BEGIN SKILL LIST` and `END SKILL LIST` is derived from registered links and `SKILL.md` metadata. Refresh it with `update-readme`, then verify link health with `check`.
 
-4. **Treating `agent-plan/` or `Todo/` as authoritative content.** These directories are local drafts and working notes, excluded by `.gitignore`. Only promote their content to formal directories when the user explicitly requests it.
+4. **Treating `.tiga/` as authoritative project content.** `.tiga/` is the git-ignored entry point for user-local files: Agent-generated plans and drafts belong in `.tiga/agent-res/markdown/`, personal plans belong in `.tiga/Todo.md`, and future local modules may live alongside them. Only promote its content to formal project directories when the user explicitly requests it.
 
 5. **Using the old directory layout.** The current repository uses `01-prompts/`, `02-agent-skills/`, `03-custom-skills/`, and `04-scripts/`. Do not reintroduce removed directories such as `00-skill-index/`, `03-workflows/`, or `05-custom-skills/`.
 

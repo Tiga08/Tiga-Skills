@@ -1,24 +1,13 @@
-# Local working notes and generated plans
-agent-plan/
-Todo/
-*.local.json
+# Local user workspace (plans, drafts, personal modules)
+.tiga/
+
+# Local tool settings
+/.claude/settings.local.json
 
 # macOS
 .DS_Store
 ._*
 
-# Editor / IDE
-*.swp
-*.swo
-*~
-.vscode/
-.vscode-test
-.idea/
-*.iws
-*.iml
-*.ipr
-
-# Environment
-.env
-.env.*
-!.env.example
+# Exported documents
+*.docx
+*.pdf
