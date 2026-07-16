@@ -9,20 +9,19 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 SKILLS_DIR="$PROJECT_ROOT/02-agent-skills"
 CUSTOM_DIR="$PROJECT_ROOT/03-custom-skills"
 README="$PROJECT_ROOT/README.md"
+DESCRIPTIONS_ZH_CONF="$PROJECT_ROOT/descriptions-zh.conf"
 
 # ── 辅助函数 ──
 
 die() { echo "错误: $1" >&2; exit 1; }
 
-# 从 SKILL.md frontmatter 提取字段值（剥除成对的首尾引号）
-extract_field() {
-  local file="$1" field="$2" value
-  value="$(sed -n '/^---$/,/^---$/p' "$file" | sed -n "s/^${field}: *//p" | head -1)"
-  if [[ "$value" == \"*\" || "$value" == \'*\' ]]; then
-    value="${value:1:${#value}-2}"
-  fi
-  echo "$value"
+validate_skill_name() {
+  local name="$1"
+  [[ -n "$name" && "$name" != "." && "$name" != ".." && "$name" != */* && \
+    "$name" != *$'\t'* && "$name" != *$'\n'* ]] || die "无效的技能名称: $name"
 }
+
+require_no_args() { [ "$#" -eq 0 ] || die "命令不接受额外参数: $*"; }
 
 # 将 $HOME 下的绝对路径转换为相对于 $SKILLS_DIR 的相对路径
 # 目的：软链接不写死用户名，仓库布局一致时可跨机器移植
@@ -36,19 +35,51 @@ to_portable_target() {
 
   # 从 $SKILLS_DIR 逐级向上找公共前缀，每上一级补一个 ..
   local common="$SKILLS_DIR" up=""
-  while [[ "$target" != "$common/"* ]]; do
+  while [[ "$target" != "$common" && "$target" != "$common/"* ]]; do
+    [ "$common" != "/" ] || break
     common="$(dirname "$common")"
     up="../$up"
   done
-  echo "${up}${target#"$common"/}"
+
+  if [ "$common" = "/" ]; then
+    echo "${up}${target#/}"
+  else
+    echo "${up}${target#"$common"/}"
+  fi
 }
 
-# 从 descriptions-zh.conf 查找外部技能的中文描述覆盖
-lookup_description_zh() {
-  local name="$1"
-  local conf="$SCRIPT_DIR/descriptions-zh.conf"
-  [ -f "$conf" ] || return
-  sed -n "s/^${name}=//p" "$conf" | head -1
+# 从 descriptions-zh.conf 读取 README 字段
+lookup_readme_field() {
+  local name="$1" field="$2" key
+  [ -f "$DESCRIPTIONS_ZH_CONF" ] || return
+  key="${name}.${field}="
+  awk -v key="$key" 'index($0, key) == 1 { print substr($0, length(key) + 1); exit }' "$DESCRIPTIONS_ZH_CONF"
+}
+
+# 获取并校验 README 所需的中文说明
+readme_description() {
+  local name="$1" desc
+  desc="$(lookup_readme_field "$name" "description")"
+  [ -n "$desc" ] || die "descriptions-zh.conf 缺少 ${name}.description"
+  printf '%s' "$desc"
+}
+
+# 删除技能时同步清理 README 元数据
+remove_readme_metadata() {
+  local name="$1" tmpfile
+  [ -f "$DESCRIPTIONS_ZH_CONF" ] || return
+  tmpfile="$(mktemp)"
+  awk -v prefix="${name}." 'index($0, prefix) != 1 { print }' "$DESCRIPTIONS_ZH_CONF" > "$tmpfile"
+  cat "$tmpfile" > "$DESCRIPTIONS_ZH_CONF"
+  rm -f "$tmpfile"
+  echo "✓ 已移除 README 元数据: $name"
+}
+
+# 转义 Markdown 表格单元格中的分隔符
+escape_markdown_cell() {
+  local value="$1"
+  value="${value//|/\\|}"
+  printf '%s' "$value"
 }
 
 # 根据分类子目录名返回来源说明文本
@@ -61,11 +92,16 @@ category_description() {
   esac
 }
 
+skill_categories() {
+  printf '%s\n' custom-skills superpowers
+  cut -f1 "$1" | sort -u | awk '$0 != "custom-skills" && $0 != "superpowers"'
+}
+
 # 判断技能来源类别（用于展示分组，不再对应物理子目录）
 classify_source() {
   local target="$1"
-  if [[ "$target" == *"/AG-Tools/"* ]]; then
-    echo "$target" | sed -n 's|.*/AG-Tools/\([^/]*\)/.*|\1|p'
+  if [[ "$target" =~ /AG-Tools/([^/]+)/ ]]; then
+    echo "${BASH_REMATCH[1]}"
   elif [[ "$target" == *"03-custom-skills/"* ]]; then
     echo "custom-skills"
   else
@@ -87,93 +123,62 @@ collect_skill_rows() {
     category="$(classify_source "$target")"
 
     resolved="$(cd "$SKILLS_DIR" && cd "$target" 2>/dev/null && pwd)" || resolved=""
-    desc=""
     if [ -z "$resolved" ]; then
       echo "⚠ 软链接目标无法解析: $name -> $target" >&2
     elif [ ! -f "$resolved/SKILL.md" ]; then
       echo "⚠ 缺少 SKILL.md: $name -> $target" >&2
-    else
-      desc="$(extract_field "$resolved/SKILL.md" "description_zh")"
-      [ -z "$desc" ] && desc="$(lookup_description_zh "$name")"
-      [ -z "$desc" ] && desc="$(extract_field "$resolved/SKILL.md" "description")"
     fi
 
+    desc="$(readme_description "$name")"
     printf '%s\t%s\t%s\n' "$category" "$name" "$desc" >> "$outfile"
   done
+}
+
+# 创建或修复单个用户级软链接；仅 Claude 的目录链接允许交互替换真实目录
+ensure_user_link() {
+  local link="$1" target="$2" replace_directory="${3:-false}"
+  local existing answer action
+
+  mkdir -p "$(dirname "$link")"
+
+  if [ -L "$link" ]; then
+    existing="$(readlink "$link")"
+    if [ "$existing" = "$target" ]; then
+      echo "✓ $link 已指向正确目标"
+      return
+    fi
+    echo "⚠ $link 当前指向 $existing"
+    echo "  期望目标: $target"
+    action="更新"
+  elif [ -e "$link" ]; then
+    if [ "$replace_directory" != "true" ] || [ ! -d "$link" ]; then
+      die "$link 已存在且不是软链接，请手动处理"
+    fi
+    echo "⚠ $link 是一个真实目录"
+    echo "  需要替换为指向 $target 的软链接"
+    action="替换"
+  else
+    ln -s "$target" "$link"
+    echo "✓ 已创建 $link -> $target"
+    return
+  fi
+
+  read -r -p "  是否${action}？[y/N] " answer
+  if [[ ! "$answer" =~ ^[Yy]$ ]]; then
+    echo "  跳过"
+    return
+  fi
+  rm -rf "$link"
+  ln -s "$target" "$link"
+  echo "✓ 已${action} $link -> $target"
 }
 
 # ── setup ──
 
 cmd_setup() {
-  local target="$SKILLS_DIR"
-
-  # ── Claude: ~/.claude/skills 整个目录作为软链接 ──
-  local claude_link="$HOME/.claude/skills"
-
-  if [ -L "$claude_link" ]; then
-    local existing
-    existing="$(readlink "$claude_link")"
-    if [ "$existing" = "$target" ]; then
-      echo "✓ $claude_link 已指向正确目标"
-    else
-      echo "⚠ $claude_link 当前指向 $existing"
-      echo "  期望目标: $target"
-      read -r -p "  是否更新？[y/N] " answer
-      if [[ "$answer" =~ ^[Yy]$ ]]; then
-        rm "$claude_link"
-        ln -s "$target" "$claude_link"
-        echo "✓ 已更新 $claude_link -> $target"
-      else
-        echo "  跳过"
-      fi
-    fi
-  elif [ -d "$claude_link" ]; then
-    echo "⚠ $claude_link 是一个真实目录"
-    echo "  需要替换为指向 $target 的软链接"
-    read -r -p "  是否删除该目录并创建软链接？[y/N] " answer
-    if [[ "$answer" =~ ^[Yy]$ ]]; then
-      rm -rf "$claude_link"
-      ln -s "$target" "$claude_link"
-      echo "✓ 已替换 $claude_link -> $target"
-    else
-      echo "  跳过"
-    fi
-  elif [ -e "$claude_link" ]; then
-    die "$claude_link 已存在且不是软链接或目录，请手动处理"
-  else
-    mkdir -p "$HOME/.claude"
-    ln -s "$target" "$claude_link"
-    echo "✓ 已创建 $claude_link -> $target"
-  fi
-
-  # ── Codex: ~/.codex/skills/tiga-skills 子链接（保持原有逻辑） ──
-  local codex_dir="$HOME/.codex/skills"
-  local codex_link="$codex_dir/tiga-skills"
-  mkdir -p "$codex_dir"
-
-  if [ -L "$codex_link" ]; then
-    local existing
-    existing="$(readlink "$codex_link")"
-    if [ "$existing" = "$target" ]; then
-      echo "✓ $codex_link 已指向正确目标"
-    else
-      echo "⚠ $codex_link 当前指向 $existing"
-      echo "  期望目标: $target"
-      read -r -p "  是否更新？[y/N] " answer
-      if [[ "$answer" =~ ^[Yy]$ ]]; then
-        rm "$codex_link"
-        ln -s "$target" "$codex_link"
-        echo "✓ 已更新 $codex_link -> $target"
-      else
-        echo "  跳过"
-      fi
-    fi
-  elif [ -e "$codex_link" ]; then
-    die "$codex_link 已存在且不是软链接，请手动处理"
-  else
-    ln -s "$target" "$codex_link"
-    echo "✓ 已创建 $codex_link -> $target"
-  fi
+  require_no_args "$@"
+  ensure_user_link "$HOME/.claude/skills" "$SKILLS_DIR" true
+  ensure_user_link "$HOME/.codex/skills/tiga-skills" "$SKILLS_DIR"
 }
 
 # ── add ──
@@ -183,8 +188,18 @@ cmd_add() {
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      --name) name="$2"; shift 2 ;;
-      *) source_path="$1"; shift ;;
+      --name)
+        [ "$#" -ge 2 ] || die "--name 缺少参数"
+        [ -z "$name" ] || die "--name 只能指定一次"
+        name="$2"
+        shift 2
+        ;;
+      --*) die "未知选项: $1" ;;
+      *)
+        [ -z "$source_path" ] || die "只能指定一个 source-path"
+        source_path="$1"
+        shift
+        ;;
     esac
   done
 
@@ -197,9 +212,11 @@ cmd_add() {
   [ -f "$source_path/SKILL.md" ] || die "未找到 SKILL.md: $source_path/SKILL.md"
 
   [ -z "$name" ] && name="$(basename "$source_path")"
+  validate_skill_name "$name"
 
   local link="$SKILLS_DIR/$name"
-  [ -e "$link" ] && die "技能 '$name' 已存在于 02-agent-skills/"
+  [[ -e "$link" || -L "$link" ]] && die "技能 '$name' 已存在于 02-agent-skills/"
+  readme_description "$name" > /dev/null
 
   local category
   category="$(classify_source "$source_path")"
@@ -216,12 +233,15 @@ cmd_add() {
 # ── add-custom ──
 
 cmd_add_custom() {
+  [ "$#" -eq 1 ] || die "用法: $0 add-custom <name>"
   local name="$1"
-  [ -z "$name" ] && die "用法: $0 add-custom <name>"
+  validate_skill_name "$name"
   [ -d "$CUSTOM_DIR/$name" ] || die "自定义技能不存在: 03-custom-skills/$name"
+  [ -f "$CUSTOM_DIR/$name/SKILL.md" ] || die "未找到 SKILL.md: 03-custom-skills/$name/SKILL.md"
 
   local link="$SKILLS_DIR/$name"
-  [ -e "$link" ] && die "技能 '$name' 已存在于 02-agent-skills/"
+  [[ -e "$link" || -L "$link" ]] && die "技能 '$name' 已存在于 02-agent-skills/"
+  readme_description "$name" > /dev/null
 
   ln -s "../03-custom-skills/$name" "$link"
   echo "✓ 已添加 ${name} -> ../03-custom-skills/${name}（分类: custom-skills）"
@@ -231,16 +251,14 @@ cmd_add_custom() {
 # ── remove ──
 
 cmd_remove() {
-  local name="$1"
-  [ -z "$name" ] && die "用法: $0 remove <name>"
+  [ "$#" -eq 1 ] || die "用法: $0 remove <name>"
+  local name="$1" link
+  validate_skill_name "$name"
+  link="$SKILLS_DIR/$name"
+  [ -L "$link" ] || die "未找到技能 '$name'"
 
-  local found
-  found="$(find "$SKILLS_DIR" -mindepth 1 -maxdepth 1 -name "$name" -type l 2>/dev/null | head -1)"
-
-  [ -z "$found" ] && die "未找到技能 '$name'"
-  [ -L "$found" ] || die "'$found' 不是软链接，拒绝删除"
-
-  rm "$found"
+  rm "$link"
+  remove_readme_metadata "$name"
   echo "✓ 已移除 $name"
   cmd_update_readme
 }
@@ -248,6 +266,7 @@ cmd_remove() {
 # ── list ──
 
 cmd_list() {
+  require_no_args "$@"
   echo "已注册技能:"
   echo "─────────────────────────────────────────────────────"
 
@@ -256,13 +275,12 @@ cmd_list() {
   collect_skill_rows "$rowsfile"
 
   local total=0
-  local ordered_categories="custom-skills superpowers"
   local category
 
   print_category_list() {
     local category="$1"
     local count
-    count="$(awk -F'\t' -v c="$category" '$1==c' "$rowsfile" | wc -l | tr -d ' ')"
+    count="$(awk -F'\t' -v c="$category" '$1 == c { count++ } END { print count + 0 }' "$rowsfile")"
     [ "$count" -eq 0 ] && return
 
     echo ""
@@ -277,14 +295,9 @@ cmd_list() {
     done < "$rowsfile"
   }
 
-  for category in $ordered_categories; do
+  while IFS= read -r category; do
     print_category_list "$category"
-  done
-
-  for category in $(cut -f1 "$rowsfile" | sort -u); do
-    [[ " $ordered_categories " == *" $category "* ]] && continue
-    print_category_list "$category"
-  done
+  done < <(skill_categories "$rowsfile")
 
   rm -f "$rowsfile"
 
@@ -298,6 +311,7 @@ cmd_list() {
 # ── check ──
 
 cmd_check() {
+  require_no_args "$@"
   local ok=0 bad=0
 
   echo "检查 02-agent-skills/ 技能软链接:"
@@ -354,7 +368,13 @@ cmd_check() {
 # ── update-readme ──
 
 cmd_update_readme() {
+  require_no_args "$@"
   [ -f "$README" ] || die "README.md 不存在"
+  awk '
+    /<!-- BEGIN SKILL LIST -->/ { begin_count++; begin_line=NR }
+    /<!-- END SKILL LIST -->/ { end_count++; end_line=NR }
+    END { exit !(begin_count == 1 && end_count == 1 && begin_line < end_line) }
+  ' "$README" || die "README.md 必须包含一组顺序正确的技能清单标记"
 
   local tmpfile tablefile rowsfile
   tmpfile="$(mktemp)"
@@ -366,7 +386,7 @@ cmd_update_readme() {
   generate_category_table() {
     local category="$1"
     local count
-    count="$(awk -F'\t' -v c="$category" '$1==c' "$rowsfile" | wc -l | tr -d ' ')"
+    count="$(awk -F'\t' -v c="$category" '$1 == c { count++ } END { print count + 0 }' "$rowsfile")"
     [ "$count" -eq 0 ] && return
 
     echo "### $category"
@@ -378,7 +398,9 @@ cmd_update_readme() {
 
     while IFS=$'\t' read -r cat name desc; do
       [ "$cat" = "$category" ] || continue
-      echo "| $name | $desc |"
+      printf '| %s | %s |\n' \
+        "$(escape_markdown_cell "$name")" \
+        "$(escape_markdown_cell "$desc")"
     done < "$rowsfile"
 
     echo ""
@@ -403,30 +425,22 @@ cmd_update_readme() {
 
       for skill_dir in "$project_skills_dir"/*/; do
         [ -f "$skill_dir/SKILL.md" ] || continue
-        local name
+        local name desc
         name="$(basename "$skill_dir")"
-        local desc=""
-        desc="$(extract_field "$skill_dir/SKILL.md" "description_zh")"
-        [ -z "$desc" ] && desc="$(lookup_description_zh "$name")"
-        [ -z "$desc" ] && desc="$(extract_field "$skill_dir/SKILL.md" "description")"
-        echo "| $name | $desc |"
+        desc="$(readme_description "$name")"
+        printf '| %s | %s |\n' \
+          "$(escape_markdown_cell "$name")" \
+          "$(escape_markdown_cell "$desc")"
       done
 
       echo ""
     fi
 
-    # 2. 指定顺序的分类
-    local ordered_categories="custom-skills superpowers"
+    # 2. 指定顺序的分类，再追加其余字母序分类
     local category
-    for category in $ordered_categories; do
+    while IFS= read -r category; do
       generate_category_table "$category"
-    done
-
-    # 3. 其余分类按字母序
-    for category in $(cut -f1 "$rowsfile" | sort -u); do
-      [[ " $ordered_categories " == *" $category "* ]] && continue
-      generate_category_table "$category"
-    done
+    done < <(skill_categories "$rowsfile")
   } > "$tablefile"
 
   # 替换标记区域
@@ -444,10 +458,29 @@ cmd_update_readme() {
     { print }
   ' "$README" > "$tmpfile"
 
-  # 用 cat 覆写而非 mv，保留 README 原有文件权限
-  cat "$tmpfile" > "$README"
+  # 仅在内容变化时覆写，并保留 README 原有文件权限
+  if cmp -s "$tmpfile" "$README"; then
+    echo "✓ README.md 技能清单无需更新"
+  else
+    cat "$tmpfile" > "$README"
+    echo "✓ README.md 技能清单已更新"
+  fi
   rm -f "$tmpfile" "$tablefile" "$rowsfile"
-  echo "✓ README.md 技能清单已更新"
+}
+
+print_usage() {
+  cat <<EOF
+用法: $0 <command> [args]
+
+命令:
+  setup                          创建用户级软链接 (~/.claude/skills → 目录链接, ~/.codex/skills/tiga-skills → 子链接)
+  add <path> [--name <name>]     从外部路径添加技能到 02-agent-skills/
+  add-custom <name>              从 03-custom-skills/ 添加技能到 02-agent-skills/
+  remove <name>                  按名称移除技能软链接
+  list                           按来源分组列出已注册技能
+  check                          检查技能软链接与项目级链接的健康状态
+  update-readme                  更新 README.md 技能清单（按来源分组）
+EOF
 }
 
 # ── 主入口 ──
@@ -456,24 +489,15 @@ cmd="${1:-}"
 shift || true
 
 case "$cmd" in
-  setup)        cmd_setup ;;
+  setup)        cmd_setup "$@" ;;
   add)          cmd_add "$@" ;;
-  add-custom)   cmd_add_custom "${1:-}" ;;
-  remove)       cmd_remove "${1:-}" ;;
-  list)         cmd_list ;;
-  check)        cmd_check ;;
-  update-readme) cmd_update_readme ;;
+  add-custom)   cmd_add_custom "$@" ;;
+  remove)       cmd_remove "$@" ;;
+  list)         cmd_list "$@" ;;
+  check)        cmd_check "$@" ;;
+  update-readme) cmd_update_readme "$@" ;;
   *)
-    echo "用法: $0 <command> [args]"
-    echo ""
-    echo "命令:"
-    echo "  setup                          创建用户级软链接 (~/.claude/skills → 目录链接, ~/.codex/skills/tiga-skills → 子链接)"
-    echo "  add <path> [--name <name>]     从外部路径添加技能到 02-agent-skills/"
-    echo "  add-custom <name>              从 03-custom-skills/ 添加技能到 02-agent-skills/"
-    echo "  remove <name>                  按名称移除技能软链接"
-    echo "  list                           按来源分组列出已注册技能"
-    echo "  check                          检查技能软链接与项目级链接的健康状态"
-    echo "  update-readme                  更新 README.md 技能清单（按来源分组）"
+    print_usage
     exit 1
     ;;
 esac

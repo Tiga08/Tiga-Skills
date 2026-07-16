@@ -1,10 +1,9 @@
 ---
-name: gen-governance
-description: Analyze repository structure and generate AGENTS.md / CLAUDE.md governance files (root and subdirectories) grounded in actual repo evidence, merging still-valid rules when overwriting, then invoke md-to-zh to sync Chinese translations. Use when a repository has no governance files or needs them regenerated after major restructuring; to audit existing docs against reality, use check-docs instead.
-description_zh: 分析仓库结构，基于仓库实际证据生成根目录及子目录的 AGENTS.md / CLAUDE.md 治理文件，覆盖时合并仍然有效的旧规则，随后调用 md-to-zh 同步中文翻译。适用于仓库尚无治理文件、或大规模重构后需要重新生成的场景；若要审计现有文档与仓库是否一致，请改用 check-docs。
+name: tiga-gen-governance
+description: Analyze repository structure and generate AGENTS.md / CLAUDE.md governance files (root and subdirectories) grounded in actual repo evidence, merging still-valid rules when overwriting, then invoke tiga-translate to sync Chinese translations. Use when a repository has no governance files or needs them regenerated after major restructuring; to audit existing docs against reality, use tiga-check-docs instead.
 ---
 
-Analyze the current repository and generate governance files (`AGENTS.md` and `CLAUDE.md`) so that AI agents can understand and operate correctly within the project. After writing, invoke the `md-to-zh` skill to keep Chinese translations in sync.
+Analyze the current repository and generate governance files (`AGENTS.md` and `CLAUDE.md`) so that AI agents can understand and operate correctly within the project. After writing, invoke the `tiga-translate` skill to keep Chinese translations in sync.
 
 **Arguments:** Optional flags may appear in the argument list.
 
@@ -74,7 +73,7 @@ Keep Chinese translations of the generated governance files in step with this ru
 
 **Trigger condition:** at least one governance file was actually written in Phase 2, AND `--no-translate` is not set.
 
-- If triggered: invoke the `md-to-zh` skill via the Skill tool, passing the paths of all governance files written this run (including subdirectory `CLAUDE.md` files) as arguments. md-to-zh writes governance-file translations as `.zh.md` next to each source, and its incremental mode skips files that did not change.
+- If triggered: invoke the `tiga-translate` skill via the Skill tool, passing the paths of all governance files written this run (including subdirectory `CLAUDE.md` files) as arguments. tiga-translate writes governance-file translations as `.zh.md` next to each source, and its incremental mode skips files that did not change.
 - If not triggered: print the reason explicitly (`--no-translate` set, or no files were written).
 
 ### Phase 5: Output Summary

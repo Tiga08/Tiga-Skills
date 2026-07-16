@@ -1,7 +1,6 @@
 ---
-name: manage-local-skills
+name: tiga-local-skills
 description: Init, add, update, remove, and list project-level skills in the current project's .agents/skills/, shared with Claude Code and Codex via .claude/skills and .codex/skills symlinks. Use when setting up a project's skill directory or importing/updating/removing skills for that project only; for the Tiga-Skills global registry (02-agent-skills/), use manage-global-skills.
-description_zh: 初始化、导入、更新、移除和列出当前项目 .agents/skills/ 中的项目级技能，通过 .claude/skills 与 .codex/skills 符号链接供 Claude Code 和 Codex 共享。适用于搭建项目技能目录或只为当前项目导入 / 更新 / 移除技能；管理 Tiga-Skills 全局注册表（02-agent-skills/）请改用 manage-global-skills。
 ---
 
 Manage the `.agents/skills/` directory in the current project. Skills placed here are exposed to Claude Code and Codex via `.claude/skills` and `.codex/skills` symlinks.

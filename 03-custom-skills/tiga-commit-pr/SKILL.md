@@ -1,7 +1,6 @@
 ---
-name: switch-commit-pr
-description: Analyze pending git changes and generate ready-to-run commands by mode, switch (branch creation), commit (adds Conventional Commits commits), pr (adds push + gh pr create); prints commands by default, executes them with --execute. Base branches are main/master/dev; on any other branch it interactively asks whether to create a new branch or continue in place (pr mode resumes directly when the tree is clean). Aware of pre-staged state, auto-splits clearly independent changes into multiple commits, targets the PR at the run's base branch, and never deletes or restores working-tree files. Use when working-tree changes are ready and the user wants branch, commit, or PR commands prepared or run from the current state.
-description_zh: 分析待提交的 git 改动并按模式生成可直接运行的命令：switch（创建分支）、commit（追加 Conventional Commits 提交）、pr（追加 push 与 gh pr create）；默认仅打印命令，--execute 时直接执行。基准分支为 main/master/dev；处于其他分支时交互式询问是切出新分支还是留在当前分支继续（pr 模式工作区干净时直接续跑）。感知预暂存状态，明确独立的变更自动拆分为多个 commit，PR 指向本次运行的基准分支，绝不删除或恢复工作区文件。适用于工作区改动就绪后，需要从当前状态生成或执行分支 / 提交 / PR 命令的场景。
+name: tiga-commit-pr
+description: "Analyze Git work in the current repository and prepare branch, Conventional Commit, and PR workflows in three modes: switch, commit, and pr. Print safe commands by default or execute them with --execute, while preserving working-tree files and respecting pre-staged changes. Use when the user wants branch or commit commands for pending changes, or wants to push existing branch commits and open or update a PR."
 ---
 
 Analyze the current repository state and generate the git/gh commands needed to switch branch, commit, and/or open a PR, staged by mode.
