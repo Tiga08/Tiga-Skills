@@ -6,7 +6,7 @@
 
 - Preserve this repository as a content-and-Bash management repository. Do not introduce an application framework, build system, or runtime dependency unless the user explicitly requests it.
 - Edit each skill at its authoritative location: project-operation skills in `.agents/skills/`, custom registry skills in `03-custom-skills/`, and external skills in their upstream repositories. Treat `02-agent-skills/` as derived state.
-- Use `./04-scripts/manage-skills.sh` for registry and user-level link operations. After registry or skill-metadata changes, run `update-readme`, then `check`.
+- Use `./04-scripts/manage-skills.sh` for registry and user-level link operations. Keep the root `descriptions-zh.conf` aligned with skill behavior; after registry or README-metadata changes, run `update-readme`, then `check`.
 - Inspect external upstream status before proposing a sync, and obtain user confirmation before pulling or registering upstream changes.
 - Keep scripts executable Bash encoded as UTF-8, follow the existing direct command style, and write new or changed script comments in Simplified Chinese. Run `bash -n` on modified shell scripts before finishing.
 
@@ -16,7 +16,7 @@
 
 2. **Bypassing `manage-skills.sh` for symlink management.** Manual link changes can leave registration, user-level discovery, and README metadata inconsistent. Use the management script for `setup`, `add`, `add-custom`, and `remove`.
 
-3. **Editing the generated README skill table by hand.** The section between `BEGIN SKILL LIST` and `END SKILL LIST` is derived from registered links and `SKILL.md` metadata. Refresh it with `update-readme`, then verify link health with `check`.
+3. **Editing the generated README skill table by hand.** The section between `BEGIN SKILL LIST` and `END SKILL LIST` is derived from registered links and the root `descriptions-zh.conf`. Refresh it with `update-readme`, then verify link health with `check`.
 
 4. **Treating `.tiga/` as authoritative project content.** `.tiga/` is the git-ignored entry point for user-local files: Agent-generated plans and drafts belong in `.tiga/agent-res/markdown/`, personal plans belong in `.tiga/Todo.md`, and future local modules may live alongside them. Only promote its content to formal project directories when the user explicitly requests it.
 

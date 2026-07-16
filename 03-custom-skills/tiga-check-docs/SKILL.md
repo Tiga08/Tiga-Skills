@@ -1,7 +1,6 @@
 ---
-name: check-docs
+name: tiga-check-docs
 description: Audit governance docs (README.md, CLAUDE.md, AGENTS.md, docs/) against actual repository state, reporting phantom paths, undocumented content, stale references, and cross-document contradictions; with --fix, interactively apply fixes and sync Chinese translations of governance files. Use when docs may have drifted after code or structure changes, or to verify documentation accuracy before a commit or PR.
-description_zh: 对照仓库实际状态审计治理文档（README.md、CLAUDE.md、AGENTS.md、docs/），报告失效路径、未记录内容、过期引用与文档间矛盾；--fix 可交互式应用修复并同步治理文件的中文翻译。适用于代码或目录结构变更后怀疑文档过期，或在提交 / PR 前核对文档准确性。
 ---
 
 Check whether governance documents are consistent with the actual repository state, and report actionable findings.
@@ -90,7 +89,7 @@ Output all findings grouped by severity, then by source document.
   → Suggested fix: remove the reference or create the missing content
 
 ### [MISSING] — Undocumented content
-- `03-custom-skills/gen-governance/` exists but is not listed in README.md skill table
+- `03-custom-skills/tiga-gen-governance/` exists but is not listed in README.md skill table
   → Suggested fix: add entry to the skill list table
 
 ### [STALE] — Outdated references
@@ -131,7 +130,7 @@ Keep the Chinese translations of governance documents in step with applied fixes
 **Trigger condition:** This run used `--fix` AND at least one fix was actually applied. If not triggered (report-only mode, or `--fix` where every fix was skipped), print why this phase is skipped.
 
 1. From Phase 6's modified-file list, select the governance files: any `CLAUDE.md` or `AGENTS.md`, at any directory level (root or subdirectories).
-2. If the selection is non-empty: invoke the `md-to-zh` skill via the Skill tool, passing those file paths as arguments. Its incremental-update mode skips unchanged files, so this stays cheap.
+2. If the selection is non-empty: invoke the `tiga-translate` skill via the Skill tool, passing those file paths as arguments. Its incremental-update mode skips unchanged files, so this stays cheap.
 3. Do NOT pass `README.md` or `docs/` files even if they were fixed — their translations land in `.tiga/translations/`, which is git-ignored, so syncing them has no lasting effect.
 4. If the modified-file list contains no governance files, print that as the skip reason.
 

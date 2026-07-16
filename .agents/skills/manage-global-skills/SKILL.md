@@ -1,10 +1,9 @@
 ---
 name: manage-global-skills
-description: Manage the Tiga-Skills global skill registry (02-agent-skills/) via manage-skills.sh — set up user-level symlinks, add external or custom skills, remove and list entries, check symlink health, and refresh the README skill table. Use when registering or removing globally shared skills in this repository or verifying registry link health; for a project's own .agents/skills/, use manage-local-skills.
-description_zh: 通过 manage-skills.sh 管理 Tiga-Skills 全局技能注册表（02-agent-skills/）——配置用户级符号链接、添加外部或自定义技能、移除与列出条目、检查软链接健康并刷新 README 技能表。适用于在本仓库注册 / 移除全局共享技能或校验注册表链接状态；管理项目自身的 .agents/skills/ 请改用 manage-local-skills。
+description: Manage the Tiga-Skills global skill registry (02-agent-skills/) and its README metadata via manage-skills.sh and the root descriptions-zh.conf — set up user-level symlinks, add or remove skills, maintain Chinese descriptions, list entries, check link health, and regenerate the README skill table. Use when registering, removing, or documenting globally shared skills in this repository; for a project's own .agents/skills/, use tiga-local-skills.
 ---
 
-Manage the skills registered in `02-agent-skills/` via the management script. Skills are stored flat: each entry is a symlink directly under `02-agent-skills/`, and its source (e.g., `superpowers`, `custom-skills`) is inferred by resolving the symlink target.
+Manage the skills registered in `02-agent-skills/` via the management script. Skills are stored flat: each entry is a symlink directly under `02-agent-skills/`, and its source (e.g., `superpowers`, `custom-skills`) is inferred by resolving the symlink target. README descriptions come only from the root `descriptions-zh.conf`.
 
 **Arguments:** One positional operation argument is required.
 
@@ -50,6 +49,13 @@ Then parse the operation and its arguments. If the operation is missing or inval
 
 ### Phase 2: Execute Operation
 
+Before `add`, `add-custom`, or `update-readme`, maintain the README metadata:
+
+1. Read the affected `SKILL.md` and the root `descriptions-zh.conf`.
+2. Prepare `<name>.description` from the skill's current behavior in Simplified Chinese. Keep it concise while including its core function, applicable context, a short usage guide, and every user-facing positional argument, operation or mode, and flag. If the skill has no fixed parameters, state the natural-language inputs it expects. Exclude options used only by internal implementation commands.
+3. If the skill's core function, invocation, or parameters change, update this field. Write the description from the actual current behavior.
+4. For a new skill, show the proposed description in the registration confirmation. Do not modify `descriptions-zh.conf` before the user confirms. After confirmation, write the config entry and then run the add command. The script rejects additions whose description is missing.
+
 Dispatch to the matching section under **Operation Details**.
 
 **Confirmation policy** (per AGENTS.md "Ask First: registering, removing skills"):
@@ -60,7 +66,7 @@ Dispatch to the matching section under **Operation Details**.
 
 ### Phase 3: Report
 
-Show the command output and summarize: which entries changed, that the README was refreshed automatically (`add` / `add-custom` / `remove` run `update-readme` themselves — no manual follow-up needed), and any remaining warnings.
+Show the command output and summarize: which entries changed, which README metadata fields changed, that the README was refreshed automatically (`add` / `add-custom` / `remove` run `update-readme` themselves — no manual follow-up needed), and any remaining warnings.
 
 ## Operation Details
 
@@ -80,7 +86,7 @@ Each path is in one of four states: absent / correct symlink / symlink to anothe
 
 Pre-check that the source path exists and contains `SKILL.md`. If `02-agent-skills/<name>` already exists, the script exits with an error — in that case ask via `AskUserQuestion` with three options: `remove` the old entry first and re-add, register under a different name with `--name`, or cancel.
 
-Registering an external skill requires user confirmation per AGENTS.md — covered by the confirmation policy above.
+Registering an external skill requires user confirmation per AGENTS.md — covered by the confirmation policy above. Before confirmation, prepare and display the Chinese description that would be written to `descriptions-zh.conf`, but do not write it yet.
 
 ### add-custom
 
@@ -88,11 +94,11 @@ Pre-check that `03-custom-skills/<name>` exists. If not, scan `03-custom-skills/
 
 ### remove
 
-Before confirming, show the entry as `name → target (category)`. Note that the script deletes only the symlink itself — it never touches the link target.
+Before confirming, show the entry as `name → target (category)`. Note that the script deletes the symlink and its matching `descriptions-zh.conf` metadata, but never touches the link target.
 
 ### list / check / update-readme
 
-Execute directly. If `check` exits non-zero, summarize the broken links and suggest fixes: `remove` the broken entries, or repair the upstream path and re-`add`.
+Execute directly. Before `update-readme`, compare the affected skill's current core behavior with its config entry and refresh stale descriptions. If `check` exits non-zero, summarize the broken links and suggest fixes: `remove` the broken entries, or repair the upstream path and re-`add`.
 
 ## Notes
 
@@ -101,8 +107,9 @@ Execute directly. If `check` exits non-zero, summarize the broken links and sugg
 - `add` converts paths under `$HOME` to user-portable relative symlinks (e.g., `../../../AG-Tools/superpowers/skills/<name>`). This assumes the layout `~/Projects/Tiga/Skills` (this repo) and `~/Projects/AG-Tools`; paths outside `$HOME` stay absolute with a portability warning.
 - `check` verifies every symlink under `02-agent-skills/` (target resolvable, `SKILL.md` present) plus the project-level links `.claude/skills` / `.codex/skills` → `.agents/skills`, and exits non-zero if any link is broken.
 - `remove` looks up the symlink by name directly under `02-agent-skills/` — no need to specify the source category.
-- `add`, `add-custom`, and `remove` all automatically run `update-readme` to refresh the skill list.
-- `update-readme` generates grouped skill tables with source descriptions, and includes project-level skills from `.agents/skills/`.
+- `add` and `add-custom` require `<name>.description` in the root `descriptions-zh.conf`; a missing description stops the operation before creating a symlink.
+- `remove` deletes the registry symlink and its matching description entry. `add`, `add-custom`, and `remove` all automatically run `update-readme`.
+- `update-readme` generates grouped two-column tables (`名称` / `描述`) from `descriptions-zh.conf`, including project-level skills from `.agents/skills/`.
 - For `setup`, the script creates:
   - `~/.claude/skills` → `02-agent-skills` (the whole directory as one symlink)
   - `~/.codex/skills/tiga-skills` → `02-agent-skills` (a sub-link under the skills directory)

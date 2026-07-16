@@ -4,16 +4,17 @@ Tiga-Skills is a content and script repository that centrally registers external
 
 ## Structure
 
-| Directory | Purpose | Authority |
+| Path | Purpose | Authority |
 | --------- | ------- | --------- |
 | `.agents/skills/` | Project-level skills shared across agents; `.claude/skills` and `.codex/skills` symlink here | primary |
 | `.claude/` | Claude Code project configuration; `skills/` is a symlink to `.agents/skills` | config |
 | `.codex/` | Codex project configuration; `skills/` is a symlink to `.agents/skills` | config |
+| `.tiga/` | Git-ignored user-local workspace; Agent output lives under `agent-res/`, personal plans live in `Todo.md`, and future local modules may be added here | derived |
 | `01-prompts/` | Reusable prompt templates | primary |
 | `02-agent-skills/` | Flat Agent Skills registry; skill entries are symlinks placed directly in this directory, grouping by source is shown only in README | derived |
 | `03-custom-skills/` | Source files for project-internal custom skills | primary |
 | `04-scripts/` | Scripts for skill registration, removal, setup, link health checks, and README updates | primary |
-| `.tiga/` | Git-ignored user-local workspace; Agent output lives under `agent-res/`, personal plans live in `Todo.md`, and future local modules may be added here | derived |
+| `descriptions-zh.conf` | Authoritative Chinese descriptions for the generated README skill list | primary |
 
 Only root-level governance files are maintained. Do not generate subdirectory `CLAUDE.md` files unless the user explicitly requests it.
 
@@ -23,7 +24,7 @@ Only root-level governance files are maintained. Do not generate subdirectory `C
 - Unless the user specifies another path, save generated Markdown under `.tiga/agent-res/markdown/`; create the directory if it does not exist.
 - Name generated Markdown files `YYYY-MM-DD_{purpose}.md`.
 - Exceptions:
-  - Translation files follow the md-to-zh skill's output rules: governance files (`AGENTS.md`, `CLAUDE.md`) are translated as `.zh.md` next to the source; all other files are output to `.tiga/translations/`.
+  - Translation files follow the tiga-translate skill's output rules: governance files (`AGENTS.md`, `CLAUDE.md`) are translated as `.zh.md` next to the source; all other files are output to `.tiga/translations/`.
   - Project governance files such as `CLAUDE.md`, `AGENTS.md`, `README.md`, and `CHANGELOG.md` stay at their conventional locations.
 
 ## User-local Workspace
@@ -43,11 +44,12 @@ Only root-level governance files are maintained. Do not generate subdirectory `C
 ### Registry Skills
 
 - Create and edit registry skill source files in `03-custom-skills/`.
+- Maintain each registered skill's Chinese README description in the root `descriptions-zh.conf`; do not derive README content from `SKILL.md` frontmatter.
 - Use `./04-scripts/manage-skills.sh add-custom <name>` to register a custom skill to `02-agent-skills/`.
 - Use `./04-scripts/manage-skills.sh add <path> [--name <name>]` to register an external skill. For paths under `$HOME`, `add` creates a user-portable relative symlink (e.g., `../../../AG-Tools/...`), assuming this repository lives at `~/Projects/Tiga/Skills` and AG-Tools at `~/Projects/AG-Tools`.
 - Use `./04-scripts/manage-skills.sh remove <name>` to remove a skill registration.
 - Use `./04-scripts/manage-skills.sh check` to verify the health of skill symlinks and project-level links.
-- After any skill registration, removal, or metadata change, run `./04-scripts/manage-skills.sh update-readme` to refresh the `README.md` skill list.
+- After any skill registration, removal, or `descriptions-zh.conf` metadata change, run `./04-scripts/manage-skills.sh update-readme` to refresh the `README.md` skill list.
 
 ## Boundaries
 
