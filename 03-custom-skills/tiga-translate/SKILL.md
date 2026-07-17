@@ -1,6 +1,7 @@
 ---
 name: tiga-translate
 description: Translate English Markdown files or directories into Simplified Chinese, preserving structure line by line; existing translations update incrementally from changed lines only, and unchanged files are skipped at zero cost. Supports a project glossary (.tiga/glossary.md or --glossary) for consistent terminology. Governance files (AGENTS.md / CLAUDE.md) get sibling .zh.md files; other files go to .tiga/translations/. Use when creating or refreshing Chinese versions of any Markdown document.
+argument-hint: "<path...> [--force] [--output <dir>] [--glossary <file>]"
 ---
 
 Translate English Markdown files into Simplified Chinese.
