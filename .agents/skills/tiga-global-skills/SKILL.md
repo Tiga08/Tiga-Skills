@@ -1,9 +1,11 @@
 ---
-name: manage-global-skills
-description: Manage the Tiga-Skills global skill registry (02-agent-skills/) and its README metadata via manage-skills.sh and the root descriptions-zh.conf — set up user-level symlinks, add or remove skills, maintain Chinese descriptions, list entries, check link health, and regenerate the README skill table. Use when registering, removing, or documenting globally shared skills in this repository; for a project's own .agents/skills/, use tiga-local-skills.
+name: tiga-global-skills
+description: Manage the Tiga-Skills global skill registry (02-agent-skills/) and its README metadata via manage-skills.sh and the root descriptions-zh.conf — set up user-level symlinks, add or remove skills, maintain Chinese descriptions, list entries, check link health and frontmatter compliance, and regenerate the README skill table. Use when registering, removing, or documenting globally shared skills in this repository; for a project's own .agents/skills/, use tiga-local-skills.
+argument-hint: "setup|add|add-custom|remove|list|check|update-readme [args]"
+compatibility: Only works inside the Tiga-Skills repository (drives 04-scripts/manage-skills.sh)
 ---
 
-Manage the skills registered in `02-agent-skills/` via the management script. Skills are stored flat: each entry is a symlink directly under `02-agent-skills/`, and its source (e.g., `superpowers`, `custom-skills`) is inferred by resolving the symlink target. README descriptions come only from the root `descriptions-zh.conf`.
+Manage the skills registered in `02-agent-skills/` via the management script — every operation runs through `./04-scripts/manage-skills.sh <operation> [args]`. Skills are stored flat: each entry is a symlink directly under `02-agent-skills/`, and its source (e.g., `superpowers`, `custom-skills`) is inferred by resolving the symlink target and used only for `list`/README grouping. README descriptions come only from the root `descriptions-zh.conf`.
 
 **Arguments:** One positional operation argument is required.
 
@@ -13,24 +15,10 @@ Manage the skills registered in `02-agent-skills/` via the management script. Sk
   - `add-custom <name>` — register a custom skill from `03-custom-skills/`.
   - `remove <name>` — remove a skill registration by name.
   - `list` — list registered skills grouped by source.
-  - `check` — verify health of skill symlinks and project-level links.
+  - `check` — verify health of skill symlinks and project-level links, plus frontmatter compliance for in-repo sources and project-level skills.
   - `update-readme` — refresh the README skill list.
 
 **No-argument behavior:** If the operation argument is missing or not one of the seven above, do not guess. Use `AskUserQuestion` to let the user choose among the four most common operations — `add` / `remove` / `list` / `check` — noting in the option descriptions that `setup`, `add-custom`, and `update-readme` can be entered via Other. Then collect any missing required arguments (source path for `add`, skill name for `add-custom` / `remove`).
-
-## Available Operations
-
-Parse the user's intent and map it to one of the following commands:
-
-| Intent | Command |
-| ------ | ------- |
-| Set up user-level symlinks | `./04-scripts/manage-skills.sh setup` |
-| Add a skill from an external path | `./04-scripts/manage-skills.sh add <path> [--name <name>]` |
-| Add a custom skill from `03-custom-skills/` | `./04-scripts/manage-skills.sh add-custom <name>` |
-| Remove a skill (looked up by name under `02-agent-skills/`) | `./04-scripts/manage-skills.sh remove <name>` |
-| List registered skills (grouped by source) | `./04-scripts/manage-skills.sh list` |
-| Check health of skill symlinks and project-level links | `./04-scripts/manage-skills.sh check` |
-| Update the README skill list | `./04-scripts/manage-skills.sh update-readme` |
 
 ## Workflow
 
@@ -98,20 +86,13 @@ Before confirming, show the entry as `name → target (category)`. Note that the
 
 ### list / check / update-readme
 
-Execute directly. Before `update-readme`, compare the affected skill's current core behavior with its config entry and refresh stale descriptions. If `check` exits non-zero, summarize the broken links and suggest fixes: `remove` the broken entries, or repair the upstream path and re-`add`.
+Execute directly. Before `update-readme`, compare the affected skill's current core behavior with its config entry and refresh stale descriptions. If `check` exits non-zero, summarize the failures and suggest fixes by category: for broken links, `remove` the entry or repair the upstream path and re-`add`; for frontmatter violations, edit the source `SKILL.md` (under `03-custom-skills/` or `.agents/skills/`).
 
 ## Notes
 
-- `02-agent-skills/` is flat: every skill entry is a symlink placed directly in that directory. Source classification (`superpowers`, `custom-skills`, etc.) is inferred from each symlink's target and used only for `list`/README grouping — there are no physical source subdirectories.
 - `add-custom` creates symlinks directly under `02-agent-skills/` with relative paths (`../03-custom-skills/<name>`).
 - `add` converts paths under `$HOME` to user-portable relative symlinks (e.g., `../../../AG-Tools/superpowers/skills/<name>`). This assumes the layout `~/Projects/Tiga/Skills` (this repo) and `~/Projects/AG-Tools`; paths outside `$HOME` stay absolute with a portability warning.
-- `check` verifies every symlink under `02-agent-skills/` (target resolvable, `SKILL.md` present) plus the project-level links `.claude/skills` / `.codex/skills` → `.agents/skills`, and exits non-zero if any link is broken.
-- `remove` looks up the symlink by name directly under `02-agent-skills/` — no need to specify the source category.
-- `add` and `add-custom` require `<name>.description` in the root `descriptions-zh.conf`; a missing description stops the operation before creating a symlink.
-- `remove` deletes the registry symlink and its matching description entry. `add`, `add-custom`, and `remove` all automatically run `update-readme`.
+- For entries sourced from AG-Tools, `add` / `remove` also maintain the downstream-reference list `~/Projects/AG-Tools/SKILLS-REFS.md` automatically, skipping with a warning when AG-Tools is absent; `add` recreates a missing `SKILLS-REFS.md` from its template, while `remove` only warns.
+- `check` verifies every symlink under `02-agent-skills/` (target resolvable, `SKILL.md` present) plus the project-level links `.claude/skills` / `.codex/skills` → `.agents/skills` and the root `SKILLS-REFS.md` symlink (must resolve to the AG-Tools downstream-reference file). For in-repo sources and `.agents/skills/` project-level skills it also validates frontmatter compliance (name format and consistency with the registered name, description non-empty and ≤1024 characters); external sources skip frontmatter validation. Any failure makes it exit non-zero.
 - `update-readme` generates grouped two-column tables (`名称` / `描述`) from `descriptions-zh.conf`, including project-level skills from `.agents/skills/`.
-- For `setup`, the script creates:
-  - `~/.claude/skills` → `02-agent-skills` (the whole directory as one symlink)
-  - `~/.codex/skills/tiga-skills` → `02-agent-skills` (a sub-link under the skills directory)
-- If listing available custom skills, scan `03-custom-skills/` for directories containing `SKILL.md`.
 - If listing available external skills from AG-Tools, scan `~/Projects/AG-Tools/superpowers/skills/`.
