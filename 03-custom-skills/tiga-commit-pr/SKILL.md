@@ -1,7 +1,7 @@
 ---
 name: tiga-commit-pr
-description: "Analyze Git work in the current repository and prepare branch, Conventional Commit, and PR workflows in three modes: switch, commit, and pr. Print safe commands by default or execute them with --execute, while preserving working-tree files and respecting pre-staged changes. Use when the user wants branch or commit commands for pending changes, or wants to push existing branch commits and open or update a PR."
-argument-hint: "switch|commit|pr [--execute]"
+description: "Analyze Git work in the current repository and prepare branch, Conventional Commit, and PR workflows in four modes: switch, commit, pr, and push. push commits on the current branch and pushes directly, skipping branch switching and PR (allowed on base branches for solo repos). Print safe commands by default or execute them with --execute, while preserving working-tree files and respecting pre-staged changes. Use when the user wants branch or commit commands for pending changes, wants to push existing branch commits and open or update a PR, or wants to commit and push directly on the current branch without a PR."
+argument-hint: "switch|commit|pr|push [--execute]"
 compatibility: Requires git and the GitHub CLI (gh)
 ---
 
@@ -9,13 +9,14 @@ Analyze the current repository state and generate the git/gh commands needed to 
 
 **Arguments:** One positional mode argument is required, followed by an optional flag.
 
-- Positional mode (required, one of): `switch` | `commit` | `pr`
+- Positional mode (required, one of): `switch` | `commit` | `pr` | `push`
   - `switch` — only generate the branch-switch command (Phase 1–2).
   - `commit` — generate switch + commit commands (Phase 1–3).
   - `pr` — generate switch + commit + push + PR commands (Phase 1–4).
+  - `push` — commit on the **current branch** (Phase 1 + Phase 3), then push directly (Phase 5). Skips Phase 2 branch switching and Phase 4 PR. **Allowed even when the current branch is a base branch (`main`/`master`/`dev`)** — intended for solo-maintained repos where branch + PR ceremony is unnecessary.
 - `--execute` (optional): when present, run each generated command directly via the Bash tool instead of only printing it. When absent (default), only print the commands in fenced code blocks — do not execute anything.
 
-**No-argument behavior:** The mode argument is required; if it is missing or not one of `switch`/`commit`/`pr`, ask the user which mode they want via `AskUserQuestion` instead of guessing.
+**No-argument behavior:** The mode argument is required; if it is missing or not one of `switch`/`commit`/`pr`/`push`, ask the user which mode they want via `AskUserQuestion` instead of guessing.
 
 ## Workflow
 
@@ -32,7 +33,9 @@ Run the following commands and read their output carefully:
 - `git diff` — full unstaged diff
 - `git log --oneline -5` — recent commit style reference
 
-### Phase 2: Branch check + switch (all modes)
+### Phase 2: Branch check + switch (`switch`, `commit`, `pr` modes)
+
+**`push` mode skips this phase entirely** — it never creates a branch and never determines `<base>`; it commits and pushes on the current branch as-is (see Phase 5).
 
 The allowed base branches are `main`, `master`, and `dev`. This phase decides whether a new branch is created, and determines `<base>` — this run's base branch, used by Phase 4 for the branch-range analysis and the PR target.
 
@@ -53,7 +56,9 @@ The allowed base branches are `main`, `master`, and `dev`. This phase decides wh
    - In all of these non-base-branch cases, determine `<base>` by merge-base distance: among `main`/`master`/`dev` branches that exist locally, pick the one closest to `HEAD` (smallest `git rev-list --count <candidate>..HEAD`); if only one exists, use it.
    - This branch decision applies in both print and `--execute` modes — it is a scope question (see the Confirmation boundary rule), determining which commands are generated, not a per-command confirmation.
 
-### Phase 3: Commit (`commit` and `pr` modes only, in addition to Phase 2)
+### Phase 3: Commit (`commit`, `pr`, and `push` modes)
+
+For `commit` and `pr` this runs in addition to Phase 2; for `push` it runs directly after Phase 1 on the current branch (no Phase 2). The change analysis, grouping, staging protocol, message drafting, and file-safety hard rules below apply identically in all three modes.
 
 1. **Analyze changes** — think deeply about what happened:
    - Analyze the **full change set**: staged + unstaged + untracked files merged as one whole. Whether the user pre-staged some or all of it must not affect the analysis. Use `git diff --cached`, `git diff`, and `git status --porcelain` together to understand each file's content change and exact state.
@@ -95,6 +100,7 @@ These apply to every command this skill generates or executes:
 - The only allowed unstaging command is `git restore --staged <path>` (or `.`) — it modifies the index only.
 - **Never** generate or execute: `git restore <path>` (without `--staged`), `git checkout -- <path>`, `git reset --hard`, `git clean`, or `git rm`. All of them can delete or overwrite working-tree files.
 - For files the user has already deleted: only record the deletion with `git add -A -- <path>`. Never delete a file on the user's behalf, and never resurrect a file the user deleted.
+- **Never** generate or execute `git push --force` or `git push --force-with-lease` (rewrites remote history), and never auto-resolve a rejected push with `git pull --rebase` / merge (can touch working-tree files). If any push is rejected (e.g. non-fast-forward), stop and report — let the user decide.
 
 ### Phase 4: PR (`pr` mode only, in addition to Phase 2 + Phase 3)
 
@@ -128,11 +134,30 @@ When Phase 2 classified this run as a resume (clean non-base branch), Phase 3 is
    )"
    ```
 
+### Phase 5: Push (`push` mode only, in addition to Phase 1 + Phase 3)
+
+This phase replaces Phase 4 for `push` mode. There is no branch switch (Phase 2 was skipped), no `<base>` analysis, and no PR — just commit on the current branch, then push it directly.
+
+1. **Warn** — always print a one-line warning first (in both print and `--execute` modes):
+   `⚠️ push 模式：将在当前分支 <name> 上提交并直接推送，跳过 PR`。
+   If `<name>` is a base branch (`main`/`master`/`dev`), extend the warning to state that this pushes directly to a protected branch with no PR review.
+2. **Commit** — run Phase 3 exactly as written (change analysis, automatic grouping, staging protocol, Conventional Commit message, and the File-safety hard rules). `push` mode adds nothing to and removes nothing from Phase 3's commit behavior.
+3. **Clean-tree resume** — decide from the Phase 1 state:
+   - Pending changes exist → do Phase 3 (step 2), then push.
+   - Working tree clean but the current branch has unpushed local commits (e.g. `git log @{u}..HEAD` non-empty, or no upstream yet with commits ahead) → skip the commit step and push the existing commits.
+   - Working tree clean and already in sync with the remote → report "无需推送" and stop; do not generate any commands.
+4. **Push** — generate exactly this, using the current branch name (never force, never auto-rebase):
+   ```bash
+   git push -u origin <current-branch>
+   ```
+   Do not run `gh pr ...` in this mode.
+
 ## Execution mode behavior
 
 - **Read-only inspection commands** (`git status`, `git diff`, `git log`, `git branch`, `gh pr view`, etc.) may be run via the Bash tool in any mode — they are required for analysis.
 - **Default (no `--execute`)**: only output the state-changing commands (`git switch`, `git restore --staged`, `git add`, `git commit`, `git push`, `gh pr create`) for the requested mode's phases, each in a fenced code block. Do not execute any of them; do not make any real changes.
-- **`--execute`**: call the Bash tool to run each generated command in order (switch → [commit steps] → [push + pr steps]). Before each command, state in one sentence what is about to happen.
+- **`--execute`**: call the Bash tool to run each generated command in order — `switch`/`commit`/`pr` run switch → [commit steps] → [push + pr steps]; `push` runs [commit steps] → `git push` on the current branch. Before each command, state in one sentence what is about to happen.
+- **`push` mode authorization**: in `push` mode, `--execute` is itself the user's authorization to commit and push directly on the current branch, including a base branch (`main`/`master`/`dev`). Print the Phase 5 warning, then proceed — do **not** add a second confirmation.
 - **Staging command form**: all staging commands must use the `git add -A -- <paths>` form, and the path list must come from the actual `git status --porcelain` state gathered in Phase 1. Do not re-add files that are already staged in their target state.
 - **`git add` pathspec fault tolerance**: if a `git add` fails with a pathspec error (e.g. the path exists in neither the working tree nor the index because its deletion was already staged), do not stop immediately. Re-run `git status --porcelain` and check: if the file's intended change is in fact already staged, skip that command and continue with the remaining commands; otherwise apply the normal stop-on-failure handling below.
 - **Failure handling under `--execute`**: for all other commands (switch / commit / push / pr create), if any command exits non-zero, stop immediately and do not run the remaining commands. Report which commands completed successfully, which one failed (with its error output), and which were not executed because of the failure.
@@ -141,5 +166,5 @@ When Phase 2 classified this run as a resume (clean non-base branch), Phase 3 is
 ## Rules
 
 - Do not suggest committing files that likely contain secrets (`.env`, credentials, keys); respect `.gitignore`.
-- If there are no changes to commit (`switch`/`commit` scenarios) or nothing to push (`pr` scenario), explain the situation and stop — do not generate empty commands.
+- If there are no changes to commit (`switch`/`commit` scenarios) or nothing to push (`pr`/`push` scenario — no pending changes and no unpushed commits), explain the situation and stop — do not generate empty commands.
 - End every run with a final summary listing each command generated (or executed) in this run and its status: printed / executed successfully / failed / not executed.

@@ -16,6 +16,7 @@ Templates for the governance files generated in Phase 2 of tiga-gen-governance.
 | `dir/` | One-line description | primary / derived / config |
 
 [The Authority column marks how authoritative each directory's content is.]
+[Order the table rows with directory entries first, then file entries; sort each group lexicographically by name.]
 [If a subdirectory has its own CLAUDE.md, note it below the table.]
 
 ## Markdown Generation

@@ -54,6 +54,7 @@ Generate the planned files in order: `AGENTS.md` → root `CLAUDE.md` → each s
 
 - Read [references/templates.md](references/templates.md) and use the corresponding template for each file.
 - Every rule must derive from the actual repository structure, files, and observable conventions. Do not fabricate rules.
+- **Directory-structure ordering:** whenever output enumerates a directory structure (e.g., the `Structure` table), list directory entries first, then file entries, with each group sorted lexicographically by name.
 - **When overwriting an existing file, merge instead of discarding:** carry over rules from the old file that are still valid and not already covered by the newly generated content. Drop only rules that contradict the current repository state.
 
 ### Phase 3: Quality Self-Check
@@ -65,6 +66,7 @@ Verify the generated files against this checklist and print each item with pass/
 - [ ] **Nothing is fabricated** — every rule derives from the actual repository structure, files, and observable conventions.
 - [ ] **Subdirectory rules are specific** — each subdirectory `CLAUDE.md` contains at least one constraint absent from the root.
 - [ ] **Instruction priority is clear** — conflicts between user instructions, subdirectory rules, and root rules are resolved by the stated priority order.
+- [ ] **Structure ordering** — directory-structure entries list directories first, then files, each group sorted by name.
 
 Any failed item must be fixed (edit the affected file, then re-check) before proceeding to Phase 4.
 

@@ -49,6 +49,10 @@ For each governance document:
    - Check that referenced scripts exist and are executable.
    - Mark as `[PHANTOM]` if the script does not exist.
 
+5. **Check directory-structure ordering.** For directory-structure tables or lists in structural documents (README, AGENTS.md):
+   - Entries must list directories first, then files, with each group sorted lexicographically by name.
+   - Mark as `[ORDER]` if the entries violate this ordering.
+
 ### Phase 3: Staleness Detection
 
 Identify content that exists but may be outdated.
@@ -101,15 +105,20 @@ Output all findings grouped by severity, then by source document.
 - README.md says "directory X does Y" but AGENTS.md says "directory X does Z"
   → Suggested fix: align the descriptions
 
+### [ORDER] — Directory-structure ordering violations
+- AGENTS.md Structure table lists `descriptions-zh.conf` before `01-prompts/`
+  → Suggested fix: reorder entries — directories first, then files, each group sorted by name
+
 ### Summary
 - N PHANTOM findings
 - N MISSING findings
 - N STALE findings
 - N MISMATCH findings
+- N ORDER findings
 - N checks passed
 ```
 
-**Priority order for suggested fixes:** `[PHANTOM]` > `[MISSING]` > `[STALE]` > `[MISMATCH]`.
+**Priority order for suggested fixes:** `[PHANTOM]` > `[MISSING]` > `[STALE]` > `[MISMATCH]` > `[ORDER]`.
 
 If `--verbose` is set, append a section listing all `[OK]` checks that passed.
 
@@ -119,10 +128,11 @@ Apply the reported fixes interactively.
 
 **Trigger condition:** `--fix` is set AND there is at least one finding. If not triggered, print why this phase is skipped (no `--fix`, or no findings) and continue to Phase 7.
 
-1. Iterate through findings in priority order (`[PHANTOM]` > `[MISSING]` > `[STALE]` > `[MISMATCH]`).
+1. Iterate through findings in priority order (`[PHANTOM]` > `[MISSING]` > `[STALE]` > `[MISMATCH]` > `[ORDER]`).
 2. For each finding, show the proposed change, then confirm via `AskUserQuestion` with four options: apply this fix / skip this fix / apply all remaining / skip all remaining. Once an "all remaining" option is chosen, stop asking per item and apply (or skip) every remaining finding accordingly.
-3. **Record the list of files actually modified in this phase** — Phase 7 takes it as input.
-4. Print a final summary of applied vs. skipped fixes.
+3. **Preserve ordering when writing structure entries:** any fix that adds or modifies directory-structure entries (including `[MISSING]` fixes that append entries) must keep the result ordered — directories first, then files, each group sorted by name.
+4. **Record the list of files actually modified in this phase** — Phase 7 takes it as input.
+5. Print a final summary of applied vs. skipped fixes.
 
 ### Phase 7: Translation Sync
 

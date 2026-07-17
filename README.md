@@ -13,11 +13,11 @@ Tiga-Skills/
 │   ├── agent-res/          # Agent 生成内容
 │   │   └── markdown/         # Agent 生成的 Markdown 文件
 │   └── Todo.md             # 用户个人计划与待办
-├── descriptions-zh.conf  # README 技能中文说明的权威配置
 ├── 01-prompts/           # 可复用的 Prompt 模板
 ├── 02-agent-skills/      # Agent Skills 注册表（扁平存放技能软链接，分组仅体现在下方技能清单文档中）
 ├── 03-custom-skills/     # 用户自定义 Skills（源文件）
-└── 04-scripts/           # 实用脚本
+├── 04-scripts/           # 实用脚本
+└── descriptions-zh.conf  # README 技能中文说明的权威配置
 ```
 
 - **.agents/skills/** — 项目级技能，`.claude/skills` 和 `.codex/skills` 均为指向此目录的软链接。
@@ -86,7 +86,7 @@ my-skill.description=说明 skill 的核心功能与适用场景。
 | 名称 | 描述 |
 | ---- | ---- |
 | tiga-check-docs | 对照仓库实际状态审计 README.md、CLAUDE.md、AGENTS.md 与 docs/，报告失效路径、遗漏内容、过期引用和文档矛盾；不传参数时扫描全部治理文档，支持重复指定 `--scope <file>` 限定范围、`--fix` 交互修复并同步治理文件译文、`--verbose` 显示通过项。 |
-| tiga-commit-pr | 分析当前 Git 改动或已有分支提交，按必选模式 `switch`、`commit`、`pr` 准备分支、Conventional Commit、推送和 PR 流程；默认仅打印安全命令，传入 `--execute` 时按顺序执行，同时保留工作区文件和已有暂存状态。 |
+| tiga-commit-pr | 分析当前 Git 改动或已有分支提交，按必选模式 `switch`、`commit`、`pr`、`push` 准备分支、Conventional Commit、推送和 PR 流程；`push` 在当前分支直接 commit 并推送、跳过分支切换与 PR，允许直推 `main/master/dev`（面向个人独享仓库）；默认仅打印安全命令，传入 `--execute` 时按顺序执行，同时保留工作区文件和已有暂存状态。 |
 | tiga-gen-governance | 根据真实仓库结构生成或重建 AGENTS.md 与 CLAUDE.md，合并仍有效的旧规则并同步简体中文版本；不传参数时处理当前项目，支持 `--dry-run` 仅输出计划、`--force` 无提示覆盖冲突文件、`--no-translate` 跳过译文同步。 |
 | tiga-local-skills | 管理当前项目 `.agents/skills/` 中供 Claude Code 与 Codex 共享的项目级 skills；支持 `init`、`add <path> [--name <name>] [--copy]`（默认符号链接，`--copy` 改为复制）、`update [<name>] [<path>]`（省略名称时批量更新）、`remove <name>` 和 `list`；增删 AG-Tools 来源条目时同步维护其 SKILLS-REFS.md 下游引用清单。 |
 | tiga-translate | 将一个或多个 Markdown 文件或目录路径翻译为简体中文，保留逐行结构并增量更新；调用格式为 `<path>... [--force] [--output <dir>] [--glossary <file>]`，分别用于强制全文重译、指定非治理文件输出目录和指定术语表；治理文件输出相邻 `.zh.md`。 |
