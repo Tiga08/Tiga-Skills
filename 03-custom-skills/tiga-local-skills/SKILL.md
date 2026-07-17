@@ -1,6 +1,7 @@
 ---
 name: tiga-local-skills
-description: Init, add, update, remove, and list project-level skills in the current project's .agents/skills/, shared with Claude Code and Codex via .claude/skills and .codex/skills symlinks. Use when setting up a project's skill directory or importing/updating/removing skills for that project only; for the Tiga-Skills global registry (02-agent-skills/), use manage-global-skills.
+description: Init, add, update, remove, and list project-level skills in the current project's .agents/skills/, shared with Claude Code and Codex via .claude/skills and .codex/skills symlinks. Use when setting up a project's skill directory or importing/updating/removing skills for that project only; for the Tiga-Skills global registry (02-agent-skills/), use tiga-global-skills.
+argument-hint: "init|add|update|remove|list [args]"
 ---
 
 Manage the `.agents/skills/` directory in the current project. Skills placed here are exposed to Claude Code and Codex via `.claude/skills` and `.codex/skills` symlinks.
@@ -9,24 +10,12 @@ Manage the `.agents/skills/` directory in the current project. Skills placed her
 
 - Positional operation (required, one of):
   - `init` — create `.agents/skills/`, set up `.claude/skills` and `.codex/skills` symlinks, migrate existing skills if needed.
-  - `add <path> [--name <name>] [--link]` — copy a skill directory into `.agents/skills/<name>/` and record its source path in `.skill-source` (use `--link` for a symlink instead).
+  - `add <path> [--name <name>] [--copy]` — symlink a skill directory into `.agents/skills/<name>` (use `--copy` to copy instead and record its source path in `.skill-source`).
   - `update [<name>] [<path>]` — re-copy a copied skill from its recorded source (`.skill-source`); without `<name>`, batch-update all copied entries.
   - `remove <name>` — delete `.agents/skills/<name>` (directory or symlink).
   - `list` — scan `.agents/skills/` and display each skill's name, type, and description.
 
 **No-argument behavior:** If the operation argument is missing or not one of the five above, do not guess. Use `AskUserQuestion` to let the user choose among `init` / `add` / `update` / `remove` / `list`, then collect any missing required arguments (source path for `add`, skill name for `remove`).
-
-## Available Operations
-
-Parse the user's intent and map it to one of the following operations:
-
-| Intent | Operation |
-| ------ | --------- |
-| Initialize project skill directory | `init` — create `.agents/skills/`, set up `.claude/skills` and `.codex/skills` symlinks, migrate existing skills if needed |
-| Import a skill | `add <path> [--name <name>] [--link]` — copy a skill directory into `.agents/skills/<name>/` and record its source in `.skill-source` (use `--link` for symlink instead) |
-| Update imported skills | `update [<name>] [<path>]` — re-copy from the recorded source; without `<name>`, batch-update all copied entries |
-| Remove a skill | `remove <name>` — delete `.agents/skills/<name>` |
-| List installed skills | `list` — scan `.agents/skills/` and display names, types, and descriptions |
 
 ## Workflow
 
@@ -59,7 +48,7 @@ Dispatch to the matching section under **Operation Details**.
 
 ### Phase 3: Report
 
-Summarize the outcome for each path or entry touched (done / skipped / migrated / replaced / updated / removed). After `init`, remind the user to add `.agents/` to version control (`git add .agents/`).
+Summarize the outcome for each path or entry touched (done / skipped / created / migrated / replaced / updated / removed). For `add` / `remove` involving an AG-Tools source, also report whether the downstream-reference list in `~/Projects/AG-Tools/SKILLS-REFS.md` was updated or skipped (and why). After `init`, remind the user to add `.agents/` to version control (`git add .agents/`).
 
 ## Operation Details
 
@@ -118,31 +107,52 @@ fi
 - Check `.claude/skills` and `.codex/skills` independently — they may be in different states.
 - Always confirm with the user before migrating or replacing anything.
 
-**Step 3 — Report results:**
-
-Summarize what was done for each path (skipped / created / migrated / replaced). Remind the user to add `.agents/` to version control (`git add .agents/`).
-
 ### add
 
 Import a skill directory into `.agents/skills/<name>/`.
 
 ```bash
-# Default: copy (project is self-contained), then record the source path for later update
+# Default: symlink (tracks upstream updates; no .skill-source needed)
+ln -s <link-target> .agents/skills/<name>
+
+# --copy: copy (project is self-contained), then record the source path for later update
 cp -R <source-path> .agents/skills/<name>
 printf '%s\n' "$(cd <source-path> && pwd)" > .agents/skills/<name>/.skill-source
-
-# --link: symlink (tracks upstream updates; no .skill-source needed)
-ln -s <absolute-source-path> .agents/skills/<name>
 ```
 
 **Parameters:**
 - `<path>` — source skill directory (must contain `SKILL.md`)
 - `--name <name>` — custom skill name (defaults to source directory name)
-- `--link` — use symlink instead of copy
+- `--copy` — copy instead of symlink
+
+**Link target convention** (matches Tiga-Skills `manage-skills.sh`):
+- Source under `$HOME` → compute `<link-target>` as a path relative to `.agents/skills/` (e.g. `../../../../AG-Tools/baoyu-skills/skills/<name>` for a project at `~/Projects/<org>/<repo>`), so the link stays portable across machines sharing the same `~/Projects` layout.
+- Source outside `$HOME` → use the absolute path and tell the user the link is machine-specific.
 
 **Validation:**
 - Source directory must contain `SKILL.md`; error otherwise.
 - Target `.agents/skills/<name>/` must not already exist. On conflict, ask via `AskUserQuestion` with three options: overwrite the existing entry, import under a different name, or cancel.
+
+**Downstream-reference maintenance** (applies to both the default link and `--copy`):
+
+After a successful import, resolve the source to an absolute path. If it is under `~/Projects/AG-Tools/`, update the reference table in `~/Projects/AG-Tools/SKILLS-REFS.md`:
+
+1. Build the row — 上游技能 = source path relative to the AG-Tools root; 引用方 = entry path relative to `~/Projects` including the entry name (covers `--name` renames); 方式 = `link` or `copy`. Example: `| baoyu-skills/skills/baoyu-format-markdown | Tiga/Skills/02-agent-skills/baoyu-format-markdown | link |`.
+2. Insert the row at its sorted position in the table body (sorted by the 上游技能 column); if the identical row already exists, skip.
+3. If `SKILLS-REFS.md` is missing, create it from this template first, then insert the row:
+
+   ```markdown
+   # 下游引用
+
+   > 记录 AG-Tools 技能被下游仓库引用的情况，回答"哪些 skill 被哪些仓库引用"。
+   > **维护契约**：本清单由下游消费方维护——各项目 `.agents/skills/` 条目的增删由 tiga-local-skills 负责，Tiga-Skills `02-agent-skills/` 注册表的增删由其 `manage-skills.sh` 负责。
+   > 行格式：上游技能为相对 AG-Tools 根目录的路径；引用方为相对 `~/Projects` 的条目路径（含条目名，覆盖 `--name` 重命名）；方式为 `link` 或 `copy`。表体按"上游技能"列排序。
+
+   | 上游技能 | 引用方 | 方式 |
+   | -------- | ------ | ---- |
+   ```
+
+4. If `~/Projects/AG-Tools/` does not exist (another machine), skip this step and note it in the Phase 3 report.
 
 ### update
 
@@ -193,6 +203,10 @@ fi
 **Validation:**
 - Target must exist under `.agents/skills/`; error otherwise.
 
+**Downstream-reference maintenance:**
+
+Before deleting, check whether the entry references AG-Tools — a symlink whose resolved target is under `~/Projects/AG-Tools/`, or a copied entry whose `.skill-source` points there. If so, after deletion remove the matching row (match on the 引用方 column) from the reference table in `~/Projects/AG-Tools/SKILLS-REFS.md`; if the file or row does not exist, note it and continue.
+
 ### list
 
 Scan `.agents/skills/` and extract description from each `SKILL.md` frontmatter.
@@ -214,9 +228,8 @@ Output as a table. Type is `copy` for a regular directory, or `symlink → <targ
 
 ## Notes
 
-- After `init`, remind the user to version-control `.agents/` (`git add .agents/`).
-- `add` copies by default for self-containment. Use `--link` to track upstream updates.
+- `add` symlinks by default to track upstream updates at low maintenance cost. Use `--copy` when the project must be self-contained.
 - `.skill-source` inside a copied entry records its upstream source path (absolute, one line) for `update`. The path is machine-specific; if it becomes invalid (e.g., after moving to another machine), `update` falls back to asking for the source path and rewrites the record.
-- `--link` creates an absolute-path symlink, which is machine-specific and does not survive moving the project to another machine; use the default copy when portability matters.
+- Default symlinks use a relative target for sources under `$HOME` (portable across machines sharing the same `~/Projects` layout) and an absolute target otherwise (machine-specific); use `--copy` when the layouts differ and portability matters.
 - `.claude/skills` and `.codex/skills` are symlinks — edit skills in `.agents/skills/`, not through the symlinks.
 - This skill runs shell commands directly; it does not depend on any external scripts.

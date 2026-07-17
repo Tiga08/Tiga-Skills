@@ -15,6 +15,7 @@ Tiga-Skills is a content and script repository that centrally registers external
 | `03-custom-skills/` | Source files for project-internal custom skills | primary |
 | `04-scripts/` | Scripts for skill registration, removal, setup, link health checks, and README updates | primary |
 | `descriptions-zh.conf` | Authoritative Chinese descriptions for the generated README skill list | primary |
+| `SKILLS-REFS.md` | Symlink to `~/Projects/AG-Tools/SKILLS-REFS.md`, the AG-Tools downstream-reference list | derived |
 
 Only root-level governance files are maintained. Do not generate subdirectory `CLAUDE.md` files unless the user explicitly requests it.
 
@@ -39,7 +40,7 @@ Only root-level governance files are maintained. Do not generate subdirectory `C
 
 - Project-level skills live in `.agents/skills/<name>/SKILL.md`.
 - `.claude/skills` and `.codex/skills` are symlinks pointing to `.agents/skills`, so all supported agents share one skill library.
-- Project-level skills are for operating this repository itself (e.g., `manage-global-skills`).
+- Project-level skills are for operating this repository itself (e.g., `tiga-global-skills`).
 
 ### Registry Skills
 

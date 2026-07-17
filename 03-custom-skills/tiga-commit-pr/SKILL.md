@@ -1,6 +1,8 @@
 ---
 name: tiga-commit-pr
 description: "Analyze Git work in the current repository and prepare branch, Conventional Commit, and PR workflows in three modes: switch, commit, and pr. Print safe commands by default or execute them with --execute, while preserving working-tree files and respecting pre-staged changes. Use when the user wants branch or commit commands for pending changes, or wants to push existing branch commits and open or update a PR."
+argument-hint: "switch|commit|pr [--execute]"
+compatibility: Requires git and the GitHub CLI (gh)
 ---
 
 Analyze the current repository state and generate the git/gh commands needed to switch branch, commit, and/or open a PR, staged by mode.
@@ -128,7 +130,8 @@ When Phase 2 classified this run as a resume (clean non-base branch), Phase 3 is
 
 ## Execution mode behavior
 
-- **Default (no `--execute`)**: only output the state-changing commands for the requested mode's phases, each in a fenced code block. Do not execute any of them; do not make any real changes.
+- **Read-only inspection commands** (`git status`, `git diff`, `git log`, `git branch`, `gh pr view`, etc.) may be run via the Bash tool in any mode — they are required for analysis.
+- **Default (no `--execute`)**: only output the state-changing commands (`git switch`, `git restore --staged`, `git add`, `git commit`, `git push`, `gh pr create`) for the requested mode's phases, each in a fenced code block. Do not execute any of them; do not make any real changes.
 - **`--execute`**: call the Bash tool to run each generated command in order (switch → [commit steps] → [push + pr steps]). Before each command, state in one sentence what is about to happen.
 - **Staging command form**: all staging commands must use the `git add -A -- <paths>` form, and the path list must come from the actual `git status --porcelain` state gathered in Phase 1. Do not re-add files that are already staged in their target state.
 - **`git add` pathspec fault tolerance**: if a `git add` fails with a pathspec error (e.g. the path exists in neither the working tree nor the index because its deletion was already staged), do not stop immediately. Re-run `git status --porcelain` and check: if the file's intended change is in fact already staged, skip that command and continue with the remaining commands; otherwise apply the normal stop-on-failure handling below.
@@ -137,11 +140,6 @@ When Phase 2 classified this run as a resume (clean non-base branch), Phase 3 is
 
 ## Rules
 
-- **Branch check**: the allowed base branches are `main`/`master`/`dev`. On any other branch, never abort silently and never proceed silently — ask per Phase 2: `switch` mode confirms whether to still create a new branch; `commit`/`pr` modes choose between switching first and committing on the current branch; `pr` mode with a clean working tree resumes at Phase 4 without asking.
-- **File safety**: never generate or execute commands that can delete or restore working-tree files (`git restore` without `--staged`, `git checkout -- <path>`, `git reset --hard`, `git clean`, `git rm`). Unstaging uses `git restore --staged` only; deletions the user already made are recorded with `git add -A --`, never undone. See "File-safety hard rules" in Phase 3.
-- Read-only inspection commands (`git status`, `git diff`, `git log`, `git branch`, `gh pr view`, etc.) may be run via the Bash tool in any mode — they are required for analysis.
-- State-changing commands (`git switch`, `git restore --staged`, `git add`, `git commit`, `git push`, `gh pr create`) may only be executed when `--execute` is present; without it, only print them.
 - Do not suggest committing files that likely contain secrets (`.env`, credentials, keys); respect `.gitignore`.
 - If there are no changes to commit (`switch`/`commit` scenarios) or nothing to push (`pr` scenario), explain the situation and stop — do not generate empty commands.
-- In `pr` mode, if the current branch already has an associated remote PR, push to update it but never create a duplicate PR (see Phase 4 step 1).
 - End every run with a final summary listing each command generated (or executed) in this run and its status: printed / executed successfully / failed / not executed.

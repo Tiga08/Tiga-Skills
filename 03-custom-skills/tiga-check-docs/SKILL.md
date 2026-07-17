@@ -1,6 +1,7 @@
 ---
 name: tiga-check-docs
 description: Audit governance docs (README.md, CLAUDE.md, AGENTS.md, docs/) against actual repository state, reporting phantom paths, undocumented content, stale references, and cross-document contradictions; with --fix, interactively apply fixes and sync Chinese translations of governance files. Use when docs may have drifted after code or structure changes, or to verify documentation accuracy before a commit or PR.
+argument-hint: "[--scope <file>] [--fix] [--verbose]"
 ---
 
 Check whether governance documents are consistent with the actual repository state, and report actionable findings.
