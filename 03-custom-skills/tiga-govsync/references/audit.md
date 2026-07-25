@@ -1,32 +1,18 @@
----
-name: tiga-check-docs
-description: Audit governance docs (README.md, CLAUDE.md, AGENTS.md, docs/) against actual repository state, reporting phantom paths, undocumented content, stale references, and cross-document contradictions; with --fix, interactively apply fixes and sync Chinese translations of governance files. Use when docs may have drifted after code or structure changes, or to verify documentation accuracy before a commit or PR.
-argument-hint: "[--scope <file>] [--fix] [--verbose]"
----
+# Governance Doc Audit
 
-Check whether governance documents are consistent with the actual repository state, and report actionable findings.
+Rules for Phase 4 of tiga-govsync — checking governance documents against the repository's actual state, reporting findings, and (in `fix` mode) applying them.
 
-**Arguments:** Optional flags may appear in the argument list.
-
-- `--scope <file>`: Limit the check to specific governance files (e.g., `--scope README.md`, `--scope docs/guide.md`). May be repeated.
-- `--fix`: After reporting, apply fixes to the discovered issues (Phase 6) and sync governance-file translations (Phase 7).
-- `--verbose`: Show `[OK]` entries for checks that pass.
-
-**No-argument behavior:** Scan the current repository root for governance documents (`README.md`, `CLAUDE.md`, `AGENTS.md`, any `AGENTS.md` or `CLAUDE.md` in subdirectories, and all `.md` files under `docs/`). The `docs/` directory may not exist; if absent, skip it silently without reporting an error. Run all phases against every governance file found.
-
-## Workflow
-
-### Phase 1: Discovery
+## Step 1: Discovery
 
 Gather the raw inputs needed for all subsequent checks.
 
-1. **Locate governance documents.** Find all files matching `README.md`, `CLAUDE.md`, `AGENTS.md` (root and subdirectories), plus all `.md` files under `docs/` (skip silently if the directory does not exist). If `--scope` is set, keep only the specified files.
+1. **Locate governance documents.** Find all files matching `README.md`, `CLAUDE.md`, `AGENTS.md` (root and subdirectories), plus all `.md` files under `docs/` (skip silently if the directory does not exist). If `--scope` is set, keep only the specified paths.
 2. **Capture the directory tree.** Run `find . -not -path './.git/*' -not -path './node_modules/*'` (or equivalent) to build the current file/directory listing. Respect `.gitignore` where practical.
 3. **Capture the git timeline.** For each governance document, run `git log -1 --format='%H %ai' -- <file>` to get its last-modified commit and date. Also collect the set of paths modified since that commit: `git diff --name-only <commit>..HEAD`.
 
 Print a brief summary: how many governance files found, their last-modified dates.
 
-### Phase 2: Structural Alignment
+## Step 2: Structural alignment
 
 Compare what the documents describe against what actually exists.
 
@@ -38,7 +24,7 @@ For each governance document:
    - Inline code spans referencing paths (e.g., `` `03-custom-skills/` ``)
    - Link targets (e.g., `[text](path/file.md)`)
 
-2. **Verify each referenced path exists.** Check files and directories against the actual tree from Phase 1.
+2. **Verify each referenced path exists.** Check files and directories against the actual tree from Step 1.
    - Mark as `[PHANTOM]` if the path does not exist.
 
 3. **Detect unreferenced content.** For structural documents (README, AGENTS.md) that enumerate directories or skills:
@@ -53,13 +39,13 @@ For each governance document:
    - Entries must list directories first, then files, with each group sorted lexicographically by name.
    - Mark as `[ORDER]` if the entries violate this ordering.
 
-### Phase 3: Staleness Detection
+## Step 3: Staleness detection
 
 Identify content that exists but may be outdated.
 
 For each governance document:
 
-1. Using the git timeline from Phase 1, identify paths that:
+1. Using the git timeline from Step 1, identify paths that:
    - Are referenced in the document, AND
    - Have been modified after the document's last edit.
 
@@ -70,7 +56,7 @@ For each governance document:
 
 3. Check version numbers, dates, or counts mentioned in the document against current values.
 
-### Phase 4: Cross-Document Consistency
+## Step 4: Cross-document consistency
 
 Check that governance documents do not contradict each other.
 
@@ -80,7 +66,7 @@ Check that governance documents do not contradict each other.
 
 Mark contradictions as `[MISMATCH]`.
 
-### Phase 5: Report
+## Step 5: Report
 
 Output all findings grouped by severity, then by source document.
 
@@ -94,7 +80,7 @@ Output all findings grouped by severity, then by source document.
   → Suggested fix: remove the reference or create the missing content
 
 ### [MISSING] — Undocumented content
-- `03-custom-skills/tiga-gen-governance/` exists but is not listed in README.md skill table
+- `03-custom-skills/tiga-govsync/` exists but is not listed in README.md skill table
   → Suggested fix: add entry to the skill list table
 
 ### [STALE] — Outdated references
@@ -122,27 +108,12 @@ Output all findings grouped by severity, then by source document.
 
 If `--verbose` is set, append a section listing all `[OK]` checks that passed.
 
-### Phase 6: Fix Application
+## Step 6: Fix application
 
-Apply the reported fixes interactively.
-
-**Trigger condition:** `--fix` is set AND there is at least one finding. If not triggered, print why this phase is skipped (no `--fix`, or no findings) and continue to Phase 7.
+Runs only in `fix` mode. If there are no findings, print that as the skip reason.
 
 1. Iterate through findings in priority order (`[PHANTOM]` > `[MISSING]` > `[STALE]` > `[MISMATCH]` > `[ORDER]`).
 2. For each finding, show the proposed change, then confirm via `AskUserQuestion` with four options: apply this fix / skip this fix / apply all remaining / skip all remaining. Once an "all remaining" option is chosen, stop asking per item and apply (or skip) every remaining finding accordingly.
 3. **Preserve ordering when writing structure entries:** any fix that adds or modifies directory-structure entries (including `[MISSING]` fixes that append entries) must keep the result ordered — directories first, then files, each group sorted by name.
-4. **Record the list of files actually modified in this phase** — Phase 7 takes it as input.
-5. Print a final summary of applied vs. skipped fixes.
-
-### Phase 7: Translation Sync
-
-Keep the Chinese translations of governance documents in step with applied fixes.
-
-**Trigger condition:** This run used `--fix` AND at least one fix was actually applied. If not triggered (report-only mode, or `--fix` where every fix was skipped), print why this phase is skipped.
-
-1. From Phase 6's modified-file list, select the governance files: any `CLAUDE.md` or `AGENTS.md`, at any directory level (root or subdirectories).
-2. If the selection is non-empty: invoke the `tiga-translate` skill via the Skill tool, passing those file paths as arguments. Its incremental-update mode skips unchanged files, so this stays cheap.
-3. Do NOT pass `README.md` or `docs/` files even if they were fixed — their translations land in `.tiga/translations/`, which is git-ignored, so syncing them has no lasting effect.
-4. If the modified-file list contains no governance files, print that as the skip reason.
-
-Note the outcome of the translation sync (or that it was skipped) in the final output.
+4. **Record the list of files actually modified** — Phase 3 takes it as input for the translation sync.
+5. Print a summary of applied vs. skipped fixes.

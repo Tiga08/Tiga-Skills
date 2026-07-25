@@ -1,0 +1,4 @@
+interface:
+  display_name: "作者观点精读"
+  short_description: "解析书籍、Podcast 与 Blog，提炼可追溯的作者观点"
+  default_prompt: "使用 $tiga-extract-viewpoints 解析这个来源，提炼作者观点并输出带来源定位的 Markdown 精读文档。"

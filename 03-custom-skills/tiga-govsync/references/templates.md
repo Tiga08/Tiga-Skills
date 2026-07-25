@@ -1,6 +1,6 @@
 # Templates
 
-Templates for the governance files generated in Phase 2 of tiga-gen-governance.
+Templates for the governance files generated in Phase 2 of tiga-govsync.
 
 ## AGENTS.md Template
 
