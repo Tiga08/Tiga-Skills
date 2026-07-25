@@ -1,0 +1,4 @@
+interface:
+  display_name: "Tiga Markdown 翻译"
+  short_description: "将 Markdown 按行翻译为简体中文并支持增量更新"
+  default_prompt: "使用 $tiga-translate 将指定 Markdown 文件翻译为简体中文。"
