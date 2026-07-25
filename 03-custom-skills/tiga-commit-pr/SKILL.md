@@ -1,7 +1,7 @@
 ---
 name: tiga-commit-pr
-description: "Analyze Git work in the current repository and prepare branch, Conventional Commit, and PR workflows in four modes: switch, commit, pr, and push. push commits on the current branch and pushes directly, skipping branch switching and PR (allowed on base branches for solo repos). Print safe commands by default or execute them with --execute, while preserving working-tree files and respecting pre-staged changes. Use when the user wants branch or commit commands for pending changes, wants to push existing branch commits and open or update a PR, or wants to commit and push directly on the current branch without a PR."
-argument-hint: "switch|commit|pr|push [--execute]"
+description: "Analyze Git work in the current repository and prepare branch, Conventional Commit, and PR workflows in four modes: switch, commit, pr, and push. push commits on the current branch and pushes directly, skipping branch switching and PR (allowed on base branches for solo repos). Execute the generated commands by default, or print them without running anything with --dry-run, while preserving working-tree files and respecting pre-staged changes. Use when the user wants branch or commit commands for pending changes, wants to push existing branch commits and open or update a PR, or wants to commit and push directly on the current branch without a PR."
+argument-hint: "switch|commit|pr|push [--dry-run]"
 compatibility: Requires git and the GitHub CLI (gh)
 ---
 
@@ -14,7 +14,7 @@ Analyze the current repository state and generate the git/gh commands needed to 
   - `commit` — generate switch + commit commands (Phase 1–3).
   - `pr` — generate switch + commit + push + PR commands (Phase 1–4).
   - `push` — commit on the **current branch** (Phase 1 + Phase 3), then push directly (Phase 5). Skips Phase 2 branch switching and Phase 4 PR. **Allowed even when the current branch is a base branch (`main`/`master`/`dev`)** — intended for solo-maintained repos where branch + PR ceremony is unnecessary.
-- `--execute` (optional): when present, run each generated command directly via the Bash tool instead of only printing it. When absent (default), only print the commands in fenced code blocks — do not execute anything.
+- `--dry-run` (optional): when present, only print the commands in fenced code blocks — do not execute anything and make no real changes. When absent (default), run each generated command directly via the Bash tool.
 
 **No-argument behavior:** The mode argument is required; if it is missing or not one of `switch`/`commit`/`pr`/`push`, ask the user which mode they want via `AskUserQuestion` instead of guessing.
 
@@ -54,7 +54,7 @@ The allowed base branches are `main`, `master`, and `dev`. This phase decides wh
      - "Stay on current branch": skip the switch command and continue to Phase 3 on the current branch.
    - `pr` mode, working tree clean: treat this as a **resume** run — no question needed; skip Phase 3 entirely and go straight to Phase 4 (push + create/update PR). This covers "branch was switched and committed in a previous run, now only push + PR is left" and "retry after a failed push".
    - In all of these non-base-branch cases, determine `<base>` by merge-base distance: among `main`/`master`/`dev` branches that exist locally, pick the one closest to `HEAD` (smallest `git rev-list --count <candidate>..HEAD`); if only one exists, use it.
-   - This branch decision applies in both print and `--execute` modes — it is a scope question (see the Confirmation boundary rule), determining which commands are generated, not a per-command confirmation.
+   - This branch decision applies in both default (executing) and `--dry-run` modes — it is a scope question (see the Confirmation boundary rule), determining which commands are generated, not a per-command confirmation.
 
 ### Phase 3: Commit (`commit`, `pr`, and `push` modes)
 
@@ -68,7 +68,7 @@ For `commit` and `pr` this runs in addition to Phase 2; for `push` it runs direc
    - Understand the intent behind the changes as a whole
    - Note any untracked files that likely should be included
 2. **Decide grouping automatically**:
-   - If the groups have clearly independent purposes and no dependency on each other, split into multiple commits directly — **do not ask**. Order the logical groups, then for each group generate an independent `git add` + `git commit` block with its own Conventional Commits message (per step 4). Print a `[k/N]` group index before each block, and under `--execute` run the blocks in group order.
+   - If the groups have clearly independent purposes and no dependency on each other, split into multiple commits directly — **do not ask**. Order the logical groups, then for each group generate an independent `git add` + `git commit` block with its own Conventional Commits message (per step 4). Print a `[k/N]` group index before each block, and unless `--dry-run`, run the blocks in group order.
    - If the group boundaries are ambiguous or the changes are coupled, ask how to proceed via `AskUserQuestion` (split into multiple commits / merge into one).
    - If the changes cannot be meaningfully split, keep a single commit.
    - Exclude files that should not be committed (secrets, build artifacts, OS files).
@@ -138,7 +138,7 @@ When Phase 2 classified this run as a resume (clean non-base branch), Phase 3 is
 
 This phase replaces Phase 4 for `push` mode. There is no branch switch (Phase 2 was skipped), no `<base>` analysis, and no PR — just commit on the current branch, then push it directly.
 
-1. **Warn** — always print a one-line warning first (in both print and `--execute` modes):
+1. **Warn** — always print a one-line warning first (in both default (executing) and `--dry-run` modes):
    `⚠️ push 模式：将在当前分支 <name> 上提交并直接推送，跳过 PR`。
    If `<name>` is a base branch (`main`/`master`/`dev`), extend the warning to state that this pushes directly to a protected branch with no PR review.
 2. **Commit** — run Phase 3 exactly as written (change analysis, automatic grouping, staging protocol, Conventional Commit message, and the File-safety hard rules). `push` mode adds nothing to and removes nothing from Phase 3's commit behavior.
@@ -155,13 +155,13 @@ This phase replaces Phase 4 for `push` mode. There is no branch switch (Phase 2 
 ## Execution mode behavior
 
 - **Read-only inspection commands** (`git status`, `git diff`, `git log`, `git branch`, `gh pr view`, etc.) may be run via the Bash tool in any mode — they are required for analysis.
-- **Default (no `--execute`)**: only output the state-changing commands (`git switch`, `git restore --staged`, `git add`, `git commit`, `git push`, `gh pr create`) for the requested mode's phases, each in a fenced code block. Do not execute any of them; do not make any real changes.
-- **`--execute`**: call the Bash tool to run each generated command in order — `switch`/`commit`/`pr` run switch → [commit steps] → [push + pr steps]; `push` runs [commit steps] → `git push` on the current branch. Before each command, state in one sentence what is about to happen.
-- **`push` mode authorization**: in `push` mode, `--execute` is itself the user's authorization to commit and push directly on the current branch, including a base branch (`main`/`master`/`dev`). Print the Phase 5 warning, then proceed — do **not** add a second confirmation.
+- **Default (no `--dry-run`)**: call the Bash tool to run each generated state-changing command in order — `switch`/`commit`/`pr` run switch → [commit steps] → [push + pr steps]; `push` runs [commit steps] → `git push` on the current branch. Before each command, state in one sentence what is about to happen.
+- **`--dry-run`**: only output the state-changing commands (`git switch`, `git restore --staged`, `git add`, `git commit`, `git push`, `gh pr create`) for the requested mode's phases, each in a fenced code block. Do not execute any of them; do not make any real changes.
+- **`push` mode authorization**: explicitly choosing `push` mode is itself the user's authorization to commit and push directly on the current branch, including a base branch (`main`/`master`/`dev`). Print the Phase 5 warning, then proceed — do **not** add a second confirmation.
 - **Staging command form**: all staging commands must use the `git add -A -- <paths>` form, and the path list must come from the actual `git status --porcelain` state gathered in Phase 1. Do not re-add files that are already staged in their target state.
 - **`git add` pathspec fault tolerance**: if a `git add` fails with a pathspec error (e.g. the path exists in neither the working tree nor the index because its deletion was already staged), do not stop immediately. Re-run `git status --porcelain` and check: if the file's intended change is in fact already staged, skip that command and continue with the remaining commands; otherwise apply the normal stop-on-failure handling below.
-- **Failure handling under `--execute`**: for all other commands (switch / commit / push / pr create), if any command exits non-zero, stop immediately and do not run the remaining commands. Report which commands completed successfully, which one failed (with its error output), and which were not executed because of the failure.
-- **Confirmation boundary**: scope questions (e.g., the branch decision on a non-base branch in Phase 2, or resolving ambiguous commit grouping in Phase 3) may use `AskUserQuestion` in any mode. What `--execute` forbids is per-command execution confirmation — passing `--execute` is itself the user's authorization for this call's scope.
+- **Failure handling when executing**: for all other commands (switch / commit / push / pr create), if any command exits non-zero, stop immediately and do not run the remaining commands. Report which commands completed successfully, which one failed (with its error output), and which were not executed because of the failure.
+- **Confirmation boundary**: scope questions (e.g., the branch decision on a non-base branch in Phase 2, or resolving ambiguous commit grouping in Phase 3) may use `AskUserQuestion` in any mode. What default execution forbids is per-command execution confirmation — the user invoking this skill is itself the authorization for this call's scope.
 
 ## Rules
 

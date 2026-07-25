@@ -85,7 +85,7 @@ my-skill.description=说明 skill 的核心功能与适用场景。
 
 | 名称 | 描述 |
 | ---- | ---- |
-| tiga-commit-pr | 分析当前 Git 改动或已有分支提交，按必选模式 `switch`、`commit`、`pr`、`push` 准备分支、Conventional Commit、推送和 PR 流程；`push` 在当前分支直接 commit 并推送、跳过分支切换与 PR，允许直推 `main/master/dev`（面向个人独享仓库）；默认仅打印安全命令，传入 `--execute` 时按顺序执行，同时保留工作区文件和已有暂存状态。 |
+| tiga-commit-pr | 分析当前 Git 改动或已有分支提交，按必选模式 `switch`、`commit`、`pr`、`push` 准备分支、Conventional Commit、推送和 PR 流程；`push` 在当前分支直接 commit 并推送、跳过分支切换与 PR，允许直推 `main/master/dev`（面向个人独享仓库）；默认按顺序执行安全命令，传入 `--dry-run` 时仅打印，同时保留工作区文件和已有暂存状态。 |
 | tiga-extract-viewpoints | 解析本地或在线 PDF、EPUB、Podcast/音视频链接与 Blog 链接，提炼作者观点、推理链、证据、假设边界与来源定位，生成结构化 Markdown 精读文档；按来源类型分别走 pdftotext、pandoc、docling、markitdown 与 baoyu-url-to-markdown 路线获取带页码或时间戳的正文，正文完全不可获取时降级为全网二手来源检索并在产出中标注证据层级与可信度；调用格式为 `<file-or-url>... [--focus <关注问题>] [--output <path>] [--no-secondary]`，支持多来源输入，`--no-secondary` 关闭二手降级只输出缺口报告，未指定输出路径时默认写入 `.tiga/agent-res/markdown/`。 |
 | tiga-govsync | 端到端维护仓库治理文档：依据仓库实况生成或重建 AGENTS.md 与 CLAUDE.md（合并仍有效的旧规则）、调用 tiga-translate 同步全部 SKILL.md/AGENTS.md/CLAUDE.md 的简体中文译文、审计文档与仓库状态的一致性；首个位置参数为模式，`init` 首次生成、`dry-run` 只读预览缺失与过期项、`update` 重建治理文件并同步全部译文、`check` 仅输出审计报告、`fix` 审计后交互修复并同步被改文件译文，不传参数时按 `dry-run` 执行；可组合 `--force` 无提示覆盖并强制全量重译、可重复的 `--scope <path>` 限定范围、`--no-translate` 跳过译文同步、`--verbose` 显示审计通过项。 |
 | tiga-local-skills | 管理当前项目 `.agents/skills/` 中供 Claude Code 与 Codex 共享的项目级 skills；支持 `init`、`add <path> [--name <name>] [--copy]`（默认符号链接，`--copy` 改为复制）、`update [<name>] [<path>]`（省略名称时批量更新）、`remove <name>` 和 `list`；增删 AG-Tools 来源条目时同步维护其 SKILLS-REFS.md 下游引用清单。 |
