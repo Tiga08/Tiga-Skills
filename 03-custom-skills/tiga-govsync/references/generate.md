@@ -1,11 +1,12 @@
 # Governance File Generation
 
-Rules for Phase 2 of tiga-govsync — analyzing the repository, planning which governance files to write, generating them, and self-checking the result.
+Rules for Phase 2 of tiga-govsync — analyzing the repository, planning which governance files to write, generating them, and removing duplication from the result.
 
 ## Step 1: Analyze the repository
 
 - List the top two levels of the directory tree.
 - Read the `README` and any existing configuration or governance files, including existing `AGENTS.md`, `CLAUDE.md`, or agent-related files. Keep the content of existing governance files — Step 3 merges their still-valid rules into the new files.
+- Read `~/.claude/CLAUDE.md` as the **global baseline** (if it is a symlink, read the file it points to). Everything it already states applies to this repository without being repeated; Step 4 checks the generated files against it.
 - Identify the repository type: application, library, monorepo, content repository, or other.
 - Identify the main functional layers of the project.
 - Determine which top-level directories need their own `CLAUDE.md`.
@@ -14,43 +15,29 @@ Criterion for subdirectory `CLAUDE.md`:
 
 > Generate a subdirectory `CLAUDE.md` only when that directory has ownership semantics, modification rules, or operational constraints that differ from the repository root.
 
-## Step 2: Build the generation plan and resolve conflicts
+## Step 2: Build the generation plan
 
-List every target file in generation order — `AGENTS.md`, root `CLAUDE.md`, then each subdirectory `CLAUDE.md`. Mark each target that already exists as a conflict. The plan's file count is the initial total N.
+List every target file in generation order — `AGENTS.md`, root `CLAUDE.md`, then each subdirectory `CLAUDE.md` — marking each target that already exists as "merge and rewrite".
 
-Resolve conflicts by mode:
-
-- `--force` is set: mark every conflicting target as "overwrite"; no prompts.
-- `dry-run`: print the analysis summary and the generation plan with conflict annotations, then **stop here** — no files are written.
-- `update`: mark every conflicting target as "merge and rewrite"; no prompts.
-- `init`: for each conflicting target, ask via `AskUserQuestion`:
-  - Overwrite this file
-  - Skip this file
-  - Overwrite all remaining conflicts
-  - Skip all remaining conflicts
-
-  An "all remaining" choice applies to every subsequent conflict without further prompting. Remove each skipped file from the generation plan and reduce N accordingly; record it (with reason "skipped by user") for the final summary.
-
-Print the analysis summary and the final generation plan (the N files that will actually be written) before generating anything.
+In `check`, print the analysis summary and the plan with those annotations, then **stop here** — no files are written. Otherwise print both before generating anything.
 
 ## Step 3: Generate the files
 
-Generate the planned files in order: `AGENTS.md` → root `CLAUDE.md` → each subdirectory `CLAUDE.md`. Before each file, print `[k/N] Generating <path> ...`, where k increments globally across all files and N is the final count from Step 2.
+Generate the planned files in order: `AGENTS.md` → root `CLAUDE.md` → each subdirectory `CLAUDE.md`.
 
-- Read [templates.md](templates.md) and use the corresponding template for each file.
+- Read [templates.md](templates.md) and use the corresponding template for each file, including its line budget.
 - Every rule must derive from the actual repository structure, files, and observable conventions. Do not fabricate rules.
-- **Directory-structure ordering:** whenever output enumerates a directory structure (e.g., the `Structure` table), list directory entries first, then file entries, with each group sorted lexicographically by name.
+- Do not write a rule that only restates the global baseline read in Step 1.
+- The `Never` section must cover the repository's most critical prohibitions.
+- Each subdirectory `CLAUDE.md` must carry at least one constraint absent from the root.
 - **When overwriting an existing file, merge instead of discarding:** carry over rules from the old file that are still valid and not already covered by the newly generated content. Drop only rules that contradict the current repository state.
 
-## Step 4: Quality self-check
+## Step 4: Deduplication pass
 
-Verify the generated files against this checklist and print each item with pass/fail status:
+Re-read each generated file and remove every rule that is already stated elsewhere. Compare in three directions:
 
-- [ ] **No duplication** — `AGENTS.md` and `CLAUDE.md` do not repeat the same descriptions unnecessarily.
-- [ ] **Dangerous operations are covered** — the `Never` section lists the repository's most critical prohibitions.
-- [ ] **Nothing is fabricated** — every rule derives from the actual repository structure, files, and observable conventions.
-- [ ] **Subdirectory rules are specific** — each subdirectory `CLAUDE.md` contains at least one constraint absent from the root.
-- [ ] **Instruction priority is clear** — conflicts between user instructions, subdirectory rules, and root rules are resolved by the stated priority order.
-- [ ] **Structure ordering** — directory-structure entries list directories first, then files, each group sorted by name.
+1. **Generated content ↔ global baseline** — a rule that only restates `~/.claude/CLAUDE.md` is deleted, not reworded.
+2. **`AGENTS.md` ↔ `CLAUDE.md`** — a rule belongs to exactly one of them.
+3. **Root ↔ subdirectory** — drop subdirectory rules already implied by the root.
 
-Any failed item must be fixed (edit the affected file, then re-check) before leaving Phase 2.
+Then go line by line and ask: would the agent get this wrong if this line were gone? If not, delete it. Apply the edits before leaving Phase 2.

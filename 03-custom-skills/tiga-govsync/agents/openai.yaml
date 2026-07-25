@@ -1,4 +1,4 @@
 interface:
   display_name: "Tiga 治理文档同步"
   short_description: "生成治理文件、同步中文译文并审计文档与仓库实况的一致性"
-  default_prompt: "使用 $tiga-govsync dry-run 预览当前仓库治理文档与译文的更新项。"
+  default_prompt: "使用 $tiga-govsync check 预览当前仓库治理文档与译文的更新项。"

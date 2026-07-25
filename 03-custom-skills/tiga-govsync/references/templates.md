@@ -2,6 +2,10 @@
 
 Templates for the governance files generated in Phase 2 of tiga-govsync.
 
+## Line budgets
+
+Target `AGENTS.md` ≤ 60 lines, root `CLAUDE.md` ≤ 40 lines, subdirectory `CLAUDE.md` ≤ 25 lines. These are targets, not hard cuts — when a file runs over, drop content by asking of each line "would the agent get this wrong without it?", never by truncating.
+
 ## AGENTS.md Template
 
 ```markdown
@@ -11,28 +15,17 @@ Templates for the governance files generated in Phase 2 of tiga-govsync.
 
 ## Structure
 
-| Directory | Purpose | Authority |
-|-----------|---------|-----------|
+| Path | Purpose | Authority |
+|------|---------|-----------|
 | `dir/` | One-line description | primary / derived / config |
 
-[The Authority column marks how authoritative each directory's content is.]
-[Order the table rows with directory entries first, then file entries; sort each group lexicographically by name.]
-[If a subdirectory has its own CLAUDE.md, note it below the table.]
+[Include only entries whose purpose or authority cannot be read off the path name and its contents. The Authority column marks how authoritative each entry is — a `derived` path that must never be edited directly is exactly the kind of row worth a table row; a self-describing directory is not.]
+[Order the rows with directory entries first, then file entries; sort each group lexicographically by name.]
+[If a subdirectory has its own CLAUDE.md, note it below the table, with one line stating that its rules win over this file inside that directory.]
 
-## Markdown Generation
+## Commands
 
-- Create Markdown files only when explicitly requested.
-- Save generated Markdown under `.tiga/agent-res/markdown/` unless the user specifies another path; create the directory if it does not exist.
-- Name generated Markdown files `YYYY-MM-DD_{purpose}.md`.
-- Exceptions:
-  - Translations stay beside their source file.
-  - Project governance files such as `CLAUDE.md`, `AGENTS.md`, `README.md`, and `CHANGELOG.md` stay at their conventional locations.
-
-## Skills
-
-- Create custom skills in the project's `.agents/skills` directory.
-- Make `.codex/skills` and `.claude/skills` symlinks pointing to `.agents/skills`.
-- Keep all reusable skill source files in `.agents/skills` so every supported agent shares one skill library.
+[Optional section. List only commands an agent cannot guess — repository-specific scripts and non-default invocations. Omit the section entirely when every relevant command is the ecosystem default.]
 
 ## Boundaries
 
@@ -44,30 +37,11 @@ Templates for the governance files generated in Phase 2 of tiga-govsync.
 
 [3–5 operations requiring user confirmation.]
 
-Focus on:
-
-- Creating or deleting files.
-- Modifying core configuration.
-- Changing public APIs.
-- Changing build, deployment, or dependency behavior.
-
 **Never:**
 
 [3–5 strictly prohibited operations.]
 
-Focus on:
-
-- Fabricating content.
-- Bypassing tests or validation.
-- Leaking credentials or private data.
-- Silently changing public behavior.
-
-## Instruction Priority
-
-1. Explicit user instructions
-2. Subdirectory `CLAUDE.md` rules
-3. This `AGENTS.md`
-4. Evidence from repository files and existing style conventions
+[Write only entries that hold in *this* repository specifically. If a rule reads just as true in any other repository, it belongs to the global config — leave it out.]
 ```
 
 ## Root CLAUDE.md Template
@@ -77,18 +51,11 @@ Focus on:
 
 ## Constraints
 
-[1–5 operational constraints for the root project.]
-
-Cover where relevant:
-
-- Editing style.
-- Dependency management.
-- Testing requirements.
-- Preservation of existing architecture, style, and public APIs.
+[1–5 operational constraints for the root project, each derived from this repository's own structure or conventions.]
 
 ## Common Gotchas
 
-[1–5 pitfalls that newcomers, including AI agents, commonly hit.]
+[1–5 pitfalls that newcomers, including AI agents, actually hit in this repository.]
 
 Format each item as:
 
@@ -102,18 +69,7 @@ Format each item as:
 
 [One paragraph: responsibilities and ownership semantics.]
 
-## Purpose
-
-[This directory's core function and content type.]
-
 ## Rules
 
-[3–5 operational rules specific to this directory.]
-
-Requirements:
-
-- Include at least one constraint that is not already present in the root `CLAUDE.md`.
-- Cover read/write permissions where relevant.
-- Cover the expected modification workflow.
-- Cover formatting, validation, or review requirements where relevant.
+[3–5 operational rules specific to this directory. At least one must be a constraint that is not already present in the root `CLAUDE.md`.]
 ```
