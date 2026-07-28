@@ -2,11 +2,15 @@
 name: tiga-govsync
 description: Maintain a repository's governance docs end to end — generate or rebuild AGENTS.md / CLAUDE.md from actual repo evidence, sync Simplified Chinese translations of every SKILL.md / AGENTS.md / CLAUDE.md by invoking tiga-translate, and audit the docs against real repository state. Modes: check (read-only report of what is missing, stale, or inconsistent), update (rebuild governance files and sync all translations), fix (audit, then apply fixes interactively). Use when governance docs or their Chinese versions have drifted from the repository, or when a repo needs governance files created.
 argument-hint: "check|update|fix [--force] [--scope <path>] [--no-translate]"
+arguments: [mode]
+disable-model-invocation: true
 ---
 
 Keep a repository's governance documents and their Simplified Chinese translations in step with the repository's actual state, in one pass.
 
 **Arguments:** the first positional argument is the mode; flags may appear anywhere. With no arguments, run `check` and close the output by listing all three modes so the user can pick the one they meant.
+
+本次调用：`$ARGUMENTS` — 模式 `$mode`
 
 Modes:
 
@@ -25,13 +29,13 @@ Flags:
 ### Phase 1: Preflight
 
 1. Locate the repository root with `git rev-parse --show-toplevel`. If the command fails, report that this skill requires a git repository — translation freshness and staleness detection both read the git timeline, and a committed baseline is what makes a rebuild revertible — and stop.
-2. Take the first positional argument as the mode and collect the flags. An unrecognized mode is an error: report it, list the three valid modes, and stop. With no positional argument, use `check`.
+2. Take `$mode` as the mode and collect the flags from `$ARGUMENTS`. An unrecognized mode is an error: report it, list the three valid modes, and stop. When `$mode` is empty, use `check`.
 
 ### Phase 2: Generate
 
 Runs in `update`, and as a read-only preview in `check`. Skipped in `fix`.
 
-Read [references/generate.md](references/generate.md) and follow it. It covers repository analysis, the global baseline, the criterion for subdirectory `CLAUDE.md` files, the generation plan, the merge-on-overwrite rule, and the deduplication pass. The templates and their line budgets live in [references/templates.md](references/templates.md).
+Read [generate.md](${CLAUDE_SKILL_DIR}/references/generate.md) and follow it. It covers repository analysis, the global baseline, the criterion for subdirectory `CLAUDE.md` files, the generation plan, the merge-on-overwrite rule, and the deduplication pass. The templates and their line budgets live in [templates.md](${CLAUDE_SKILL_DIR}/references/templates.md).
 
 Existing files are merged and rewritten without prompting: merge-on-overwrite preserves the old rules that still hold, and Phase 1 has already established a git repository, so any rewrite is revertible.
 
@@ -59,7 +63,7 @@ Its output rules apply unchanged: `AGENTS.md` / `CLAUDE.md` become `.zh.md` next
 
 Runs in all three modes.
 
-Read [references/audit.md](references/audit.md) and follow it. It covers the discovery inputs, the `[PHANTOM]` / `[MISSING]` / `[STALE]` / `[MISMATCH]` checks, the report, the fix priority order, and the interactive fix flow.
+Read [audit.md](${CLAUDE_SKILL_DIR}/references/audit.md) and follow it. It covers the discovery inputs, the `[PHANTOM]` / `[MISSING]` / `[STALE]` / `[MISMATCH]` checks, the report, the fix priority order, and the interactive fix flow.
 
 In `check` and `update`, the audit reports only and writes nothing. In `fix`, run the interactive fix flow after the report, then return to Phase 3 with the list of modified governance files (`CLAUDE.md` / `AGENTS.md` at any level) to sync their translations. Do not pass `README.md` or `docs/` files — their translations land in the git-ignored `.tiga/translations/`, so syncing them has no lasting effect.
 

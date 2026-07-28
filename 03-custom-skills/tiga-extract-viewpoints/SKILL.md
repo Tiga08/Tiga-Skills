@@ -2,6 +2,16 @@
 name: tiga-extract-viewpoints
 description: Extract what an author, host, or guest actually argues — central claim, sub-arguments, reasoning chains, evidence, assumptions, caveats, and disputes — from local or online PDF/EPUB books, podcast and video episode links, and blog or article links, preserving page, chapter, timestamp, or URL locators, and write a structured Markdown close-reading document. Acquisition runs on locally available tools (pdftotext, pandoc, docling, markitdown, baoyu-url-to-markdown); when the primary text cannot be obtained at all, it falls back to a searched secondary-source pass with every claim labelled by evidence tier. Use when the user asks to summarize a book, close-read a long article, digest a podcast, extract an author's argument, map a line of reasoning, or produce reading and listening notes with source locators; not for plain format conversion or verbatim transcription.
 argument-hint: "<file-or-url>... [--focus <question>] [--output <path>] [--no-secondary]"
+disable-model-invocation: true
+allowed-tools:
+  - Bash(command -v *)
+  - Bash(pdftotext *)
+  - Bash(pandoc *)
+  - Bash(mktemp *)
+  - Bash(conda run -n files docling *)
+  - Bash(conda run -n files markitdown *)
+  - Bash(bun install *)
+  - Bash(*/baoyu-fetch *)
 ---
 
 Reconstruct how an author or speaker reaches their conclusions, rather than listing topics or high-level takeaways. Keep acquisition, evidence recording, and synthesis as separate steps — never let a plausible-sounding summary substitute for text you failed to obtain.
@@ -16,24 +26,24 @@ Reconstruct how an author or speaker reaches their conclusions, rather than list
 
 ### Phase 1: Scope
 
-1. Identify the sources, the output language, the focus question, and the output path.
+1. Identify the sources, the output language, the focus question, and the output path. 本次调用参数：`$ARGUMENTS`
 2. With no focus question, cover the central thesis, key arguments, reasoning chains, evidence, assumptions, caveats, counter-positions, and practical implications.
 3. With no `--output`, write to `.tiga/agent-res/markdown/YYYY-MM-DD_{source-slug}-viewpoints.md`, creating the directory if needed. An explicit `--output` always wins.
 4. If a source is ambiguous or unreachable, say what is missing. Never substitute a title, cover blurb, show notes, or search snippet for analysis of the actual text.
 
 ### Phase 2: Preflight
 
-**Resolve the toolchain.** Probe once, then fix the resolved command prefix for the whole run:
+**Resolve the toolchain.** The `PATH` probe already ran before this turn — read its result below and do **not** probe again:
 
-```bash
-command -v pdftotext pandoc docling markitdown bun
+```!
+command -v pdftotext pandoc docling markitdown bun ffmpeg || true
 ```
 
-Any tool missing from `PATH` may still exist in the `files` conda environment — retry it as `conda run -n files <tool>`. Record which tools resolved and how. Do not install anything: if a route's tool is unavailable, drop to the next route in the table below and note the degradation.
+Any tool absent from that output may still exist in the `files` conda environment — only for those, retry once as `conda run -n files <tool> --version`. Fix the resolved command prefix for the whole run and record which tools resolved and how. Do not install anything: if a route's tool is unavailable, drop to the next route in the table below and note the degradation.
 
 **Classify each source** as PDF, EPUB, Blog, Podcast (with transcript / YouTube / RSS / audio-only), or unknown. Classification picks the route; a misclassified source wastes the entire acquisition phase.
 
-Read [references/source-routing.md](references/source-routing.md) before running any acquisition command — it holds the verified invocations, output-file naming, and per-format traps.
+Read [source-routing.md](${CLAUDE_SKILL_DIR}/references/source-routing.md) before running any acquisition command — it holds the verified invocations, output-file naming, and per-format traps.
 
 ### Phase 3: Acquire the citable text
 
@@ -64,7 +74,7 @@ Run a completeness check before any analysis:
 Then branch:
 
 - **Text is substantially complete** → Phase 5, evidence tier `primary`.
-- **Text is missing or unobtainable** → stop the primary route and report the gap. Unless `--no-secondary` is set, read [references/secondary-sources.md](references/secondary-sources.md) and follow it. With `--no-secondary`, deliver the gap report and stop.
+- **Text is missing or unobtainable** → stop the primary route and report the gap. Unless `--no-secondary` is set, read [secondary-sources.md](${CLAUDE_SKILL_DIR}/references/secondary-sources.md) and follow it. With `--no-secondary`, deliver the gap report and stop.
 
 Never quietly patch a hole in the primary text with recalled or searched material — a secondary pass is a labelled mode, not an invisible repair.
 
@@ -106,7 +116,7 @@ Evidence rules:
 
 ### Phase 7: Write the Markdown
 
-Use [assets/viewpoint-analysis-template.md](assets/viewpoint-analysis-template.md) as the skeleton and produce a standalone readable document. Delete sections that do not apply; leave no empty placeholders.
+Use [viewpoint-analysis-template.md](${CLAUDE_SKILL_DIR}/assets/viewpoint-analysis-template.md) as the skeleton and produce a standalone readable document. Delete sections that do not apply; leave no empty placeholders.
 
 Locator formats:
 

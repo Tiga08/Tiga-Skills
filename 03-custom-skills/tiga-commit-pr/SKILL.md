@@ -2,12 +2,17 @@
 name: tiga-commit-pr
 description: "Analyze Git work in the current repository and prepare branch, Conventional Commit, and PR workflows in four modes: switch, commit, pr, and push. push commits on the current branch and pushes directly, skipping branch switching and PR (allowed on base branches for solo repos). Execute the generated commands by default, or print them without running anything with --dry-run, while preserving working-tree files and respecting pre-staged changes. Use when the user wants branch or commit commands for pending changes, wants to push existing branch commits and open or update a PR, or wants to commit and push directly on the current branch without a PR."
 argument-hint: "switch|commit|pr|push [--dry-run]"
+arguments: [mode]
+disable-model-invocation: true
+allowed-tools: Bash(git restore --staged *)
 compatibility: Requires git and the GitHub CLI (gh)
 ---
 
 Analyze the current repository state and generate the git/gh commands needed to switch branch, commit, and/or open a PR, staged by mode.
 
 **Arguments:** One positional mode argument is required, followed by an optional flag.
+
+本次调用：`$ARGUMENTS` — 模式 `$mode`
 
 - Positional mode (required, one of): `switch` | `commit` | `pr` | `push`
   - `switch` — only generate the branch-switch command (Phase 1–2).
@@ -16,22 +21,27 @@ Analyze the current repository state and generate the git/gh commands needed to 
   - `push` — commit on the **current branch** (Phase 1 + Phase 3), then push directly (Phase 5). Skips Phase 2 branch switching and Phase 4 PR. **Allowed even when the current branch is a base branch (`main`/`master`/`dev`)** — intended for solo-maintained repos where branch + PR ceremony is unnecessary.
 - `--dry-run` (optional): when present, only print the commands in fenced code blocks — do not execute anything and make no real changes. When absent (default), run each generated command directly via the Bash tool.
 
-**No-argument behavior:** The mode argument is required; if it is missing or not one of `switch`/`commit`/`pr`/`push`, ask the user which mode they want via `AskUserQuestion` instead of guessing.
+**No-argument behavior:** The mode argument is required; if `$mode` is empty or not one of `switch`/`commit`/`pr`/`push`, ask the user which mode they want via `AskUserQuestion` instead of guessing.
 
 ## Workflow
 
 ### Phase 1: Gather state (all modes)
 
-Run the following commands and read their output carefully:
+The state below was gathered before this run started — read it carefully and do **not** re-run these commands:
 
-- `git status` — overview of staged, unstaged, and untracked files
-- `git status --porcelain` — machine-readable per-file state (staged / unstaged / untracked / deleted / renamed); this is the authoritative input for the staging protocol and execution fault tolerance below
-- `git branch --show-current` — current branch name
-- `git diff --cached --stat` — staged change summary
-- `git diff --stat` — unstaged change summary
-- `git diff --cached` — full staged diff
-- `git diff` — full unstaged diff
-- `git log --oneline -5` — recent commit style reference
+```!
+git branch --show-current
+git status --porcelain
+git log --oneline -5
+git diff --cached --stat
+git diff --stat
+```
+
+Read it as: current branch name; machine-readable per-file state (staged / unstaged / untracked / deleted / renamed — the authoritative input for the staging protocol and execution fault tolerance below); recent commit style reference; staged change summary; unstaged change summary.
+
+The full diffs (`git diff --cached`, `git diff`) are **not** pre-injected — read them on demand with the Bash tool when the change analysis needs them.
+
+**Repository guard:** if the injected output above is `fatal: not a git repository` (or otherwise shows no repository), report that this skill requires a git repository and stop — generate nothing.
 
 ### Phase 2: Branch check + switch (`switch`, `commit`, `pr` modes)
 

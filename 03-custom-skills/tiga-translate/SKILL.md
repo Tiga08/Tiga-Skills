@@ -6,13 +6,15 @@ argument-hint: "<path...> [--force] [--output <dir>] [--glossary <file>]"
 
 Translate English Markdown files into Simplified Chinese.
 
-**Arguments:** One or more paths separated by spaces. Each path may be a directory or a single `.md` file, mixed freely. Flags `--force`, `--output <dir>`, and `--glossary <file>` may appear anywhere in the argument list.
+**Arguments:** One or more paths separated by spaces. Each path may be a directory or a single `.md` file, mixed freely. Flags `--force`, `--output <dir>`, and `--glossary <file>` may appear anywhere in the argument list. 本次调用参数：`$ARGUMENTS`
 
 - `--force`: Force full re-translation of every file, overwriting existing translations and bypassing the incremental-update logic.
 - `--output <dir>`: Specify the output directory for translated files. Default: `.tiga/translations` (relative to project root). Does not affect governance files — see the output rules in Phase 2.
 - `--glossary <file>`: Specify a glossary file. Default: `.tiga/glossary.md` at the project root. If the default file does not exist, silently skip glossary loading; if an explicitly passed file does not exist, report an error and stop before any translation starts (same rhythm as reporting invalid paths upfront). Format matches baoyu-translate's built-in glossary — a `| English | Chinese | Notes |` Markdown table — so glossary files are interchangeable between the two skills.
 
 **No-argument behavior:** If no path is provided, tell the user that at least one file or directory path is required, then stop. Do not scan the project for files and do not ask any questions.
+
+**Invocation constraint:** unlike the other `tiga-*` skills, this one deliberately does **not** set `disable-model-invocation` — `tiga-govsync` Phase 3 invokes it through the Skill tool, which that flag would block. Keep it model-invocable.
 
 ## Workflow
 

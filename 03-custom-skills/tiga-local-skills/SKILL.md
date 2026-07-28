@@ -2,11 +2,15 @@
 name: tiga-local-skills
 description: Init, add, update, remove, and list project-level skills in the current project's .agents/skills/, shared with Claude Code and Codex via .claude/skills and .codex/skills symlinks. Use when setting up a project's skill directory or importing/updating/removing skills for that project only; for the Tiga-Skills global registry (02-agent-skills/), use tiga-global-skills.
 argument-hint: "init|add|update|remove|list [args]"
+arguments: [mode]
+disable-model-invocation: true
 ---
 
 Manage the `.agents/skills/` directory in the current project. Skills placed here are exposed to Claude Code and Codex via `.claude/skills` and `.codex/skills` symlinks.
 
 **Arguments:** One positional operation argument is required.
+
+本次调用：`$ARGUMENTS` — 操作 `$mode`
 
 - Positional operation (required, one of):
   - `init` — create `.agents/skills/`, set up `.claude/skills` and `.codex/skills` symlinks, migrate existing skills if needed.
@@ -15,7 +19,7 @@ Manage the `.agents/skills/` directory in the current project. Skills placed her
   - `remove <name>` — delete `.agents/skills/<name>` (directory or symlink).
   - `list` — scan `.agents/skills/` and display each skill's name, type, and description.
 
-**No-argument behavior:** If the operation argument is missing or not one of the five above, do not guess. Use `AskUserQuestion` to let the user choose among `init` / `add` / `update` / `remove` / `list`, then collect any missing required arguments (source path for `add`, skill name for `remove`).
+**No-argument behavior:** If `$mode` is empty or not one of the five above, do not guess. Use `AskUserQuestion` to let the user choose among `init` / `add` / `update` / `remove` / `list`, then collect any missing required arguments (source path for `add`, skill name for `remove`).
 
 ## Workflow
 

@@ -84,7 +84,7 @@ bun install --cwd "<baoyu-skill-dir>/scripts"   # only if scripts/node_modules i
   --adapter youtube --output "$TMP/episode.md"
 ```
 
-Resolve `<baoyu-skill-dir>` from the registered skill (`02-agent-skills/baoyu-url-to-markdown`). Its own SKILL.md governs preferences and the output-path convention.
+Resolve `<baoyu-skill-dir>` to `~/.claude/skills/baoyu-url-to-markdown` (the user-level registration, valid from any project). Its own SKILL.md governs preferences and the output-path convention.
 
 **Transcript file (VTT/SRT) — second route.** Download the file, then:
 
