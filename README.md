@@ -43,9 +43,12 @@ Tiga-Skills/
 
 ```ini
 my-skill.description=说明 skill 的核心功能与适用场景。
+my-skill.arguments=<file> [--flag]
 ```
 
-`add` 与 `add-custom` 会在创建链接前校验该字段；`remove` 会同步删除对应配置。`update-readme` 从该配置生成技能说明。
+`add` 与 `add-custom` 会在创建链接前校验 `description`；`remove` 会同步删除对应配置。`update-readme` 从该配置生成技能说明。
+
+技能清单的「参数」列优先取 `SKILL.md` 的 `argument-hint` 字段，仅当该字段缺失（如不可修改的外部技能）时才回退到 `<name>.arguments`，两者都没有时显示 `—`。
 
 ```bash
 # 从外部路径添加技能
@@ -75,39 +78,38 @@ my-skill.description=说明 skill 的核心功能与适用场景。
 
 位于 `.agents/skills/`，供操作本仓库使用
 
-| 名称 | 描述 |
-| ---- | ---- |
-| tiga-global-skills | 管理 Tiga-Skills 全局技能注册表，支持配置用户级链接（`setup`）、注册外部 skill（`add <path> [--name <name>]`）、注册自定义 skill（`add-custom <name>`）、移除（`remove <name>`）、列出（`list`）、检查（`check`）及刷新 README（`update-readme`）；中文说明来自根目录 descriptions-zh.conf。 |
+| 名称 | 参数 | 描述 |
+| ---- | ---- | ---- |
+| tiga-global-skills | setup\|add\|add-custom\|remove\|list\|check\|update-readme [args] | 管理 Tiga-Skills 全局技能注册表：配置用户级链接、注册与移除外部或自定义 skill、列出条目、检查链接与 frontmatter 健康状态、刷新 README 技能清单；中文说明来自根目录 descriptions-zh.conf。 |
 
 ### custom-skills
 
 来源于 `03-custom-skills/`，通过 `add-custom` 命令注册
 
-| 名称 | 描述 |
-| ---- | ---- |
-| tiga-commit-pr | 分析当前 Git 改动或已有分支提交，按必选模式 `switch`、`commit`、`pr`、`push` 准备分支、Conventional Commit、推送和 PR 流程；`push` 在当前分支直接 commit 并推送、跳过分支切换与 PR，允许直推 `main/master/dev`（面向个人独享仓库）；默认按顺序执行安全命令，传入 `--dry-run` 时仅打印，同时保留工作区文件和已有暂存状态。 |
-| tiga-extract-viewpoints | 解析本地或在线 PDF、EPUB、Podcast/音视频链接与 Blog 链接，提炼作者观点、推理链、证据、假设边界与来源定位，生成结构化 Markdown 精读文档；按来源类型分别走 pdftotext、pandoc、docling、markitdown 与 baoyu-url-to-markdown 路线获取带页码或时间戳的正文，正文完全不可获取时降级为全网二手来源检索并在产出中标注证据层级与可信度；调用格式为 `<file-or-url>... [--focus <关注问题>] [--output <path>] [--no-secondary]`，支持多来源输入，`--no-secondary` 关闭二手降级只输出缺口报告，未指定输出路径时默认写入 `.tiga/agent-res/markdown/`。 |
-| tiga-govsync | 端到端维护仓库治理文档：依据仓库实况生成或重建 AGENTS.md 与 CLAUDE.md（合并仍有效的旧规则、并对照 `~/.claude/CLAUDE.md` 全局基线去重）、调用 tiga-translate 同步全部 SKILL.md/AGENTS.md/CLAUDE.md 的简体中文译文、审计文档与仓库状态的一致性；首个位置参数为模式，`check` 只读预览缺失与过期项并输出审计报告、`update` 重建治理文件并同步全部译文、`fix` 审计后交互修复并同步被改文件译文，不传参数时按 `check` 执行；可组合 `--force` 强制全量重译、`--scope <path>` 限定单一范围、`--no-translate` 跳过译文同步。 |
-| tiga-local-skills | 管理当前项目 `.agents/skills/` 中供 Claude Code 与 Codex 共享的项目级 skills；支持 `init`、`add <path> [--name <name>] [--copy]`（默认符号链接，`--copy` 改为复制）、`update [<name>] [<path>]`（省略名称时批量更新）、`remove <name>` 和 `list`；增删 AG-Tools 来源条目时同步维护其 SKILLS-REFS.md 下游引用清单。 |
-| tiga-translate | 将一个或多个 Markdown 文件或目录路径翻译为简体中文，保留逐行结构并增量更新；调用格式为 `<path>... [--force] [--output <dir>] [--glossary <file>]`，分别用于强制全文重译、指定非治理文件输出目录和指定术语表；治理文件输出相邻 `.zh.md`。 |
+| 名称 | 参数 | 描述 |
+| ---- | ---- | ---- |
+| tiga-commit-pr | switch\|commit\|pr\|push [--dry-run] | 分析当前 Git 改动或已有分支提交，按模式准备分支、Conventional Commit、推送和 PR 流程；`push` 在当前分支直接提交并推送、跳过分支切换与 PR（面向个人独享仓库）；默认执行安全命令，保留工作区文件和已有暂存状态。 |
+| tiga-govsync | check\|update\|fix [--force] [--scope <path>] [--no-translate] [--skills] | 端到端维护仓库治理文档：依据仓库实况生成或重建 AGENTS.md 与 CLAUDE.md（合并仍有效的旧规则并对照全局基线去重）、调用 tiga-translate 同步全部 SKILL.md/AGENTS.md/CLAUDE.md 的简体中文译文、审计文档与仓库状态的一致性；可按官方 Agent Skills 规范检查仓库内 SKILL.md 的 frontmatter 与正文合规性。 |
+| tiga-local-skills | init\|add\|update\|remove\|list [args] | 管理当前项目 `.agents/skills/` 中供 Claude Code 与 Codex 共享的项目级 skills，支持初始化、导入、更新、移除与列出；增删 AG-Tools 来源条目时同步维护其 SKILLS-REFS.md 下游引用清单。 |
+| tiga-translate | <path...> [--force] [--output <dir>] [--glossary <file>] | 将一个或多个 Markdown 文件或目录路径翻译为简体中文，保留逐行结构并增量更新，未变更文件零成本跳过；治理文件输出相邻 `.zh.md`，其余输出到 `.tiga/translations/`。 |
 
 ### ECC-skills
 
 来源于外部路径，通过 `add` 命令注册
 
-| 名称 | 描述 |
-| ---- | ---- |
-| security-scan | 使用 AgentShield 扫描 `.claude/` 中的 CLAUDE.md、settings.json、MCP、hooks 和 agent 定义，或用 `init` 初始化安全配置；`scan [<path>]` 支持 `--path <path>`、`--min-severity <level>`、`--format json/markdown/html`、`--fix`，深度分析可组合 `--opus` 与 `--stream`。 |
-| skill-scout | 在创建、复刻或扩展 skill 前搜索并审查本地、marketplace、GitHub 和 Web 候选；无固定命令参数，调用时提供目标任务、触发条件、涉及领域/工具/框架/数据源及 3–5 个关键词或同义词，也可明确要求跳过搜索或从零创建。 |
-| skill-stocktake | 按统一质量清单审查全局及当前项目的 Claude skills 和 commands；运行 `/skill-stocktake` 时依据 `results.json` 自动执行 Quick Scan（无缓存则完整盘点），传入唯一可选位置参数 `full`（`/skill-stocktake full`）可强制 Full Stocktake，当前工作目录决定项目级扫描范围。 |
+| 名称 | 参数 | 描述 |
+| ---- | ---- | ---- |
+| security-scan | scan [<path>]\|init [--min-severity <level>] [--format json\|markdown\|html] [--fix] [--opus] [--stream] | 使用 AgentShield 扫描 `.claude/` 中的 CLAUDE.md、settings.json、MCP、hooks 和 agent 定义，发现安全漏洞、配置错误与注入风险，也可初始化安全配置。 |
+| skill-scout | — | 在创建、复刻或扩展 skill 前搜索并审查本地、marketplace、GitHub 和 Web 候选；无固定命令参数，调用时提供目标任务、触发条件、涉及领域与关键词。 |
+| skill-stocktake | [full] | 按统一质量清单审查全局及当前项目的 Claude skills 和 commands，依据缓存自动执行增量 Quick Scan 或完整盘点，当前工作目录决定项目级扫描范围。 |
 
 ### baoyu-skills
 
 来源于外部路径，通过 `add` 命令注册
 
-| 名称 | 描述 |
-| ---- | ---- |
-| baoyu-format-markdown | 将 `<file>` 的纯文本或 Markdown 优化为带 frontmatter、标题、摘要、层级、列表和代码块的 `{filename}-formatted.md`，也可选择保留原结构或仅原地修正排版；排版参数包括 `--quotes`/`-q`、`--no-quotes`、`--spacing`/`-s`、`--no-spacing`、`--emphasis`/`-e`、`--no-emphasis`。 |
-| baoyu-url-to-markdown | 通过 Chrome 抓取 `<url>` 并用 X、YouTube、Hacker News 或通用适配器转换为 Markdown/JSON；支持 `--output <path>`、`--format markdown/json`/`--json`、`--adapter x/youtube/hn/generic`、`--headless`、`--wait-for none/interaction/force`（别名 `--wait-for-interaction`、`--wait-for-login`）、`--timeout <ms>`、`--interaction-timeout <ms>`、`--interaction-poll-interval <ms>`、`--download-media`、`--media-dir <dir>`、`--cdp-url <url>`、`--browser-path <path>`、`--chrome-profile-dir <path>`、`--debug-dir <dir>`。 |
+| 名称 | 参数 | 描述 |
+| ---- | ---- | ---- |
+| baoyu-format-markdown | <file> [--quotes\|-q] [--no-quotes] [--spacing\|-s] [--no-spacing] [--emphasis\|-e] [--no-emphasis] | 将纯文本或 Markdown 优化为带 frontmatter、标题、摘要、层级、列表和代码块的 `{filename}-formatted.md`，也可选择保留原结构或仅原地修正排版。 |
+| baoyu-url-to-markdown | <url> [--output <path>] [--format markdown\|json] [--adapter x\|youtube\|hn\|generic] [--headless] [--wait-for none\|interaction\|force] ... | 通过 Chrome 抓取网页并用 X、YouTube、Hacker News 或通用适配器转换为 Markdown/JSON，可按需等待登录或人工交互后再抓取。 |
 
 <!-- END SKILL LIST -->

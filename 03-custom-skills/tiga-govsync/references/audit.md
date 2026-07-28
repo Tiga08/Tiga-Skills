@@ -1,6 +1,6 @@
 # Governance Doc Audit
 
-Rules for Phase 4 of tiga-govsync — checking governance documents against the repository's actual state, reporting findings, and (in `fix` mode) applying them.
+Rules for Phase 5 of tiga-govsync — checking governance documents against the repository's actual state, reporting findings, and (in `fix` mode) applying them.
 
 ## Step 1: Discovery
 

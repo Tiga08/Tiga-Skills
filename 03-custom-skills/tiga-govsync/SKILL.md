@@ -1,7 +1,7 @@
 ---
 name: tiga-govsync
-description: Maintain a repository's governance docs end to end — generate or rebuild AGENTS.md / CLAUDE.md from actual repo evidence, sync Simplified Chinese translations of every SKILL.md / AGENTS.md / CLAUDE.md by invoking tiga-translate, and audit the docs against real repository state. Modes: check (read-only report of what is missing, stale, or inconsistent), update (rebuild governance files and sync all translations), fix (audit, then apply fixes interactively). Use when governance docs or their Chinese versions have drifted from the repository, or when a repo needs governance files created.
-argument-hint: "check|update|fix [--force] [--scope <path>] [--no-translate]"
+description: Maintain a repository's governance docs end to end — generate or rebuild AGENTS.md / CLAUDE.md from actual repo evidence, sync Simplified Chinese translations of every SKILL.md / AGENTS.md / CLAUDE.md by invoking tiga-translate, and audit the docs against real repository state. With --skills it also checks the repository's own SKILL.md files against the official Agent Skills spec. Modes: check (read-only report of what is missing, stale, or inconsistent), update (rebuild governance files and sync all translations), fix (audit, then apply fixes interactively). Use when governance docs or their Chinese versions have drifted from the repository, or when a repo needs governance files created.
+argument-hint: "check|update|fix [--force] [--scope <path>] [--no-translate] [--skills]"
 arguments: [mode]
 disable-model-invocation: true
 ---
@@ -23,6 +23,7 @@ Flags:
 - `--force`: passed through to `tiga-translate` — force full re-translation instead of incremental updates.
 - `--scope <path>`: limit generation, translation, and audit to one path (a file or directory). To cover two paths, run the skill twice.
 - `--no-translate`: skip the translation phase (Phase 3).
+- `--skills`: additionally check the repository's own `SKILL.md` files against the official Agent Skills spec (Phase 4). Without it, that phase does not run at all.
 
 ## Workflow
 
@@ -47,7 +48,7 @@ Runs in `update` and `fix`. In `check` it degrades to the freshness check below.
 
 **Build the whitelist:**
 
-1. Start from the governance files written in Phase 2 (in `fix`, from the files modified in Phase 4 instead).
+1. Start from the governance files written in Phase 2 (in `fix`, from the files modified in Phases 4 and 5 instead).
 2. In `update`, add every `SKILL.md` found by `find . -name SKILL.md -not -path './.git/*'`, plus every `AGENTS.md` and `CLAUDE.md` at any directory level.
 3. Do **not** pass `-L` to `find`. Symlinked directories such as `02-agent-skills/`, `.claude/skills`, and `.codex/skills` must not be followed — external upstream sources are never to be modified.
 4. Exclude files whose names end in `.zh.md` or `-zh.md`.
@@ -59,7 +60,19 @@ Its output rules apply unchanged: `AGENTS.md` / `CLAUDE.md` become `.zh.md` next
 
 **Freshness check (`check` only):** do not invoke tiga-translate. For each whitelist entry, compute its output path per the rules above and classify it as **missing translation** (no output file), **stale translation**, or **up to date** — judging staleness by the same baseline criterion tiga-translate applies, documented in its `SKILL.md`. Print the three groups as lists.
 
-### Phase 4: Audit
+### Phase 4: Skill Spec
+
+Runs only when `--skills` is set. Without the flag, skip it silently — the rest of the workflow is unchanged.
+
+**Discovery:** `.agents/skills/*/SKILL.md` and `03-custom-skills/*/SKILL.md`. Skip a directory that does not exist and say so. As in Phase 3, do **not** pass `-L` to `find`: symlink directories such as `02-agent-skills/`, `.claude/skills`, and `.codex/skills` are never followed, because the skills behind them belong to upstream repositories. `--scope` narrows the set.
+
+Read [skill-spec.md](${CLAUDE_SKILL_DIR}/references/skill-spec.md) and follow it. It covers the frontmatter field table, the `[MISSING]` / `[UNKNOWN]` / `[MISMATCH]` / `[STALE]` / `[BLOAT]` checks, the report, and the fix flow.
+
+In `check` the phase reports only. In `update` apply the fixes directly; in `fix` confirm each one first. Any `SKILL.md` actually modified goes back to Phase 3 for a translation sync.
+
+If `./04-scripts/manage-skills.sh` exists in the repository, also run `./04-scripts/manage-skills.sh check` and fold its result into the report — it enforces the mechanical half of the same rules, and two separate verdicts would only contradict each other.
+
+### Phase 5: Audit
 
 Runs in all three modes.
 
@@ -69,11 +82,12 @@ In `check` and `update`, the audit reports only and writes nothing. In `fix`, ru
 
 `--scope` narrows the set of audited documents.
 
-### Phase 5: Summary
+### Phase 6: Summary
 
 Print a final summary covering:
 
 - Governance files generated, skipped (with reason), or failed.
 - Translation results counted by status: new / incremental update / already up to date / full re-translation / failed. In `check`, the missing / stale / up-to-date counts instead.
+- Skill spec findings counted by category (`--skills` only), and which fixes were applied vs. skipped.
 - Audit findings counted by category, and which fixes were applied vs. skipped.
 - Any phase that was skipped, with the reason.

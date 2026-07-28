@@ -165,6 +165,16 @@ readme_description() {
   printf '%s' "$desc"
 }
 
+# 获取 README 参数列内容：优先 SKILL.md 的 argument-hint，其次 descriptions-zh.conf 的 arguments 兜底
+# 已转义 Markdown 表格分隔符，调用方直接输出即可
+skill_arguments() {
+  local name="$1" file="${2:-}" args=""
+  [ -n "$file" ] && [ -f "$file" ] && args="$(frontmatter_field "$file" "argument-hint")"
+  [ -n "$args" ] || args="$(lookup_readme_field "$name" "arguments")"
+  [ -n "$args" ] || args="—"
+  escape_markdown_cell "$args"
+}
+
 # 删除技能时同步清理 README 元数据
 remove_readme_metadata() {
   local name="$1" tmpfile
@@ -198,6 +208,21 @@ frontmatter_field() {
   printf '%s' "$value"
 }
 
+# 官方允许的 frontmatter 顶层字段：Claude Code 扩展字段 + Agent Skills 开放标准字段
+# 规范演进时在此处增补；未列出的键一律按拼写偏差报违规
+ALLOWED_FRONTMATTER_KEYS="name description when_to_use argument-hint arguments \
+disable-model-invocation user-invocable allowed-tools disallowed-tools model effort \
+context agent background hooks paths shell license compatibility metadata"
+
+# 列出 frontmatter 中的顶层键（缩进行与列表项不计入）
+frontmatter_keys() {
+  awk '
+    NR == 1 && $0 == "---" { in_fm = 1; next }
+    in_fm && $0 == "---" { exit }
+    in_fm && match($0, /^[A-Za-z_][A-Za-z0-9_-]*:/) { print substr($0, 1, RLENGTH - 1) }
+  ' "$1"
+}
+
 # 按官方 Agent Skills 规范校验并输出单个技能的 frontmatter 检查结果
 # 参数: SKILL.md 路径、期望名称（注册链接名，即 agent 实际看到的目录名）、显示标签
 check_skill_frontmatter() {
@@ -213,6 +238,12 @@ check_skill_frontmatter() {
   fi
   [ -n "$desc" ] || violations+=("缺少 description 字段或值为空")
   [ "${#desc}" -le 1024 ] || violations+=("description 超过 1024 字符（当前 ${#desc}）")
+
+  local key
+  while IFS= read -r key; do
+    [ -n "$key" ] || continue
+    [[ " $ALLOWED_FRONTMATTER_KEYS " == *" $key "* ]] || violations+=("未知 frontmatter 字段: $key")
+  done < <(frontmatter_keys "$file")
 
   if [ "${#violations[@]}" -eq 0 ]; then
     echo "  ✓ ${label}"
@@ -258,7 +289,7 @@ classify_source() {
   fi
 }
 
-# 遍历 $SKILLS_DIR 下所有一级符号链接，输出 "分类\t名称\t描述" 到指定文件
+# 遍历 $SKILLS_DIR 下所有一级符号链接，输出 "分类\t名称\t参数\t描述" 到指定文件
 collect_skill_rows() {
   local outfile="$1"
   : > "$outfile"
@@ -266,7 +297,7 @@ collect_skill_rows() {
   local link
   for link in "$SKILLS_DIR"/*; do
     [ -L "$link" ] || continue
-    local name target category resolved desc
+    local name target category resolved desc args
     name="$(basename "$link")"
     target="$(readlink "$link")"
     category="$(classify_source "$target")"
@@ -279,7 +310,8 @@ collect_skill_rows() {
     fi
 
     desc="$(readme_description "$name")"
-    printf '%s\t%s\t%s\n' "$category" "$name" "$desc" >> "$outfile"
+    args="$(skill_arguments "$name" "${resolved:+$resolved/SKILL.md}")"
+    printf '%s\t%s\t%s\t%s\n' "$category" "$name" "$args" "$desc" >> "$outfile"
   done
 }
 
@@ -453,7 +485,7 @@ cmd_list() {
     printf "  %-35s %s\n" "名称" "描述"
     echo "  ───────────────────────────────────────────────────"
 
-    while IFS=$'\t' read -r cat name desc; do
+    while IFS=$'\t' read -r cat name args desc; do
       [ "$cat" = "$category" ] || continue
       printf "  %-35s %s\n" "$name" "$desc"
       total=$((total + 1))
@@ -601,13 +633,14 @@ cmd_update_readme() {
     echo ""
     echo "$(category_description "$category")"
     echo ""
-    echo "| 名称 | 描述 |"
-    echo "| ---- | ---- |"
+    echo "| 名称 | 参数 | 描述 |"
+    echo "| ---- | ---- | ---- |"
 
-    while IFS=$'\t' read -r cat name desc; do
+    while IFS=$'\t' read -r cat name args desc; do
       [ "$cat" = "$category" ] || continue
-      printf '| %s | %s |\n' \
+      printf '| %s | %s | %s |\n' \
         "$(escape_markdown_cell "$name")" \
+        "$args" \
         "$(escape_markdown_cell "$desc")"
     done < "$rowsfile"
 
@@ -628,16 +661,18 @@ cmd_update_readme() {
       echo ""
       echo "位于 \`.agents/skills/\`，供操作本仓库使用"
       echo ""
-      echo "| 名称 | 描述 |"
-      echo "| ---- | ---- |"
+      echo "| 名称 | 参数 | 描述 |"
+      echo "| ---- | ---- | ---- |"
 
       for skill_dir in "$project_skills_dir"/*/; do
         [ -f "$skill_dir/SKILL.md" ] || continue
-        local name desc
+        local name desc args
         name="$(basename "$skill_dir")"
         desc="$(readme_description "$name")"
-        printf '| %s | %s |\n' \
+        args="$(skill_arguments "$name" "${skill_dir}SKILL.md")"
+        printf '| %s | %s | %s |\n' \
           "$(escape_markdown_cell "$name")" \
+          "$args" \
           "$(escape_markdown_cell "$desc")"
       done
 

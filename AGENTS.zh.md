@@ -35,7 +35,7 @@ Tiga-Skills 通过扁平符号链接注册外部和自定义 Agent Skills，并�
 
 - 在源位置编辑技能：操作本仓库的项目级技能在 `.agents/skills/<name>/`，注册表技能在 `03-custom-skills/<name>/`，外部技能在其各自的上游仓库。
 - 注册、移除和用户级链接配置一律走 `./04-scripts/manage-skills.sh` —— 手工改动链接会让注册状态、用户级发现和 README 元数据彼此脱节。
-- 让 `descriptions-zh.conf` 与各技能的实际行为保持一致；README 技能列表由它生成，而不是由 `SKILL.md` frontmatter 生成。
+- 让 `descriptions-zh.conf` 与各技能的实际行为保持一致；其中 `<name>.description` 是 README 技能表描述列的来源，`<name>.arguments` 则是技能缺少 `argument-hint` frontmatter 时参数列的兜底（外部技能的源文件不可编辑）。
 - 任何注册、移除或 `descriptions-zh.conf` 变更之后，先运行 `update-readme`，再运行 `check`。
 
 **先询问：**

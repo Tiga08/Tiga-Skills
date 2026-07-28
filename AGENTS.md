@@ -35,7 +35,7 @@ For a path under `$HOME`, `add` writes a user-portable relative symlink (e.g. `.
 
 - Edit a skill at its source: project-operation skills in `.agents/skills/<name>/`, registry skills in `03-custom-skills/<name>/`, external skills in their own upstream repository.
 - Route registration, removal, and user-level link setup through `./04-scripts/manage-skills.sh` — hand-made link changes leave registration, user-level discovery, and README metadata out of sync.
-- Keep `descriptions-zh.conf` aligned with what each skill actually does; it, not `SKILL.md` frontmatter, is what the README table is built from.
+- Keep `descriptions-zh.conf` aligned with what each skill actually does; its `<name>.description` is what the README table's description column is built from, and `<name>.arguments` is the fallback for the parameter column when a skill has no `argument-hint` frontmatter (external skills, whose sources must not be edited).
 - After any registration, removal, or `descriptions-zh.conf` change, run `update-readme`, then `check`.
 
 **Ask First:**
