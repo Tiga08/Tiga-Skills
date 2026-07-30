@@ -1,0 +1,7 @@
+interface:
+  display_name: "Skill display name"
+  short_description: "Describe the skill in 25 to 64 characters"
+  default_prompt: "Use $skill-name to perform a representative task."
+
+policy:
+  allow_implicit_invocation: true

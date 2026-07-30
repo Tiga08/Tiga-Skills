@@ -1,0 +1,7 @@
+interface:
+  display_name: "Tiga-更新 Skills"
+  short_description: "审查并更新本地 Skills，跟踪 Claude 与 Codex 规范"
+  default_prompt: "使用 $tiga-update-skills 审查 `.agents/skills` 中的所有本地 Skill。"
+
+policy:
+  allow_implicit_invocation: true

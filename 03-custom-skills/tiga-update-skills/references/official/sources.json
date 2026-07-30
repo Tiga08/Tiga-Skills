@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "retrieved_at": "2026-07-30T14:20:22+00:00",
+  "sources": [
+    {
+      "id": "claude-skill-creator",
+      "product": "Claude Code",
+      "source_url": "https://github.com/anthropics/skills/blob/main/skills/skill-creator/SKILL.md",
+      "raw_url": "https://raw.githubusercontent.com/anthropics/skills/main/skills/skill-creator/SKILL.md",
+      "snapshot": "claude-skill-creator.md",
+      "sha256": "dcd4803e61e913e6fc27294184cd3a71f09f5e924ff20c8a9a20173e7b3c2bcf",
+      "bytes": 33168
+    },
+    {
+      "id": "codex-skill-creator",
+      "product": "Codex",
+      "source_url": "https://github.com/openai/skills/blob/main/skills/.system/skill-creator/SKILL.md",
+      "raw_url": "https://raw.githubusercontent.com/openai/skills/main/skills/.system/skill-creator/SKILL.md",
+      "snapshot": "codex-skill-creator.md",
+      "sha256": "a17383bfb1448637ac1f757ad891ddb9676fa30b0eff620200f0e1cbc0cc0d50",
+      "bytes": 18664
+    }
+  ]
+}
