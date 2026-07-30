@@ -14,14 +14,14 @@ Keep a repository's governance documents and their Simplified Chinese translatio
 Modes:
 
 - `check`: read-only. Report which agent-governance files are missing or would be rebuilt, which existing README/docs files need reconciliation, which translations are missing or stale, and what the audit finds. Writes nothing.
-- `update`: rebuild `AGENTS.md` / `CLAUDE.md` (merging still-valid old rules), reconcile every existing project-owned `README.md` and `docs/**/*.md`, run a read-only audit, then sync translations of every project-owned `SKILL.md` / `AGENTS.md` / `CLAUDE.md`.
+- `update`: rebuild `AGENTS.md` / `CLAUDE.md` (merging still-valid old rules), reconcile every existing project-owned `README.md` and `docs/**/*.md`, update local skills when `--skills` is set, run the governance-document audit read-only, then sync translations of every project-owned `SKILL.md` / `AGENTS.md` / `CLAUDE.md`.
 - `fix`: audit, apply fixes interactively, then sync translations of the modified `SKILL.md` / `AGENTS.md` / `CLAUDE.md` files.
 
 Flags:
 
 - `--scope <path>`: limit generation, translation, skill checks, and document audit to one path (a file or directory). To cover two paths, run the skill twice.
 - `--no-translate`: skip the translation phase (Phase 5).
-- `--skills`: additionally check the repository's own `SKILL.md` files against the cross-client Agent Skills profile (Phase 3). Without it, that phase does not run at all.
+- `--skills`: additionally audit the repository's own `SKILL.md` files against the cross-client Agent Skills profile (Phase 3). `check` reports findings, `update` applies them subject to the dirty-target guard, and `fix` asks before each change. Without this flag, that phase does not run at all.
 
 ## Workflow
 
@@ -37,7 +37,7 @@ Flags:
 
 Runs in `update`, and as a read-only preview in `check`. Skipped in `fix`.
 
-Read [generate.md](references/generate.md) and follow it. It covers governance-document discovery, repository analysis, the personal Claude global baseline, the single-source ownership rule, the criterion for subdirectory `CLAUDE.md` files, the generation plan, the merge-on-overwrite rule, cross-document reconciliation, and section-structure governance. Template rules and line budgets live in [templates.md](references/templates.md); the templates themselves live under `templates/`.
+Read [generate.md](references/generate.md) and follow it. It covers governance-document discovery, repository analysis, the supported clients' global instruction baselines, the single-source ownership rule, the criterion for subdirectory `CLAUDE.md` files, the generation plan, the merge-on-overwrite rule, cross-document reconciliation, and section-structure governance. Template rules and line budgets live in [templates.md](references/templates.md); the templates themselves live under `templates/`.
 
 Existing clean files are merged and rewritten without prompting; pre-existing dirty targets follow the Phase 1 confirmation guard. Merge-on-overwrite preserves old rules that still hold, and reconciliation changes only facts that violate the ownership model. Create a missing root `README.md` from its template; never create a missing nested `README.md` or topic document under `docs/`.
 

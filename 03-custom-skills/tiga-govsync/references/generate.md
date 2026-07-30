@@ -26,7 +26,8 @@ When the root `README.md` is missing, generate it from `templates/readme-root-te
 
 - List the top two levels of the directory tree.
 - Read every discovered `README.md` and `docs/**/*.md`, plus existing configuration and agent-governance files such as `AGENTS.md`, `CLAUDE.md`, or related files. For a large documentation set, inventory first and process files in bounded groups while maintaining one fact-to-owner map. Keep the content of existing governance files — Step 3 merges their still-valid rules into the new files.
-- Read `~/.claude/CLAUDE.md` as the **global baseline** (if it is a symlink, read the file it points to). Everything it already states applies to this repository without being repeated; Step 4 checks the generated files against it.
+- Read the available host-level agent instruction baselines. Treat already-loaded global instructions as authoritative; when reading files directly, resolve symlinks and use `~/.claude/CLAUDE.md` for Claude Code and `~/.codex/AGENTS.md` for Codex when present. Record which supported clients are covered.
+- Treat a repository rule as globally redundant only when every supported client that needs it inherits an equivalent rule. Otherwise keep cross-client rules in `AGENTS.md` and keep Claude-only additions in the root `CLAUDE.md`.
 - Identify the repository type: application, library, monorepo, content repository, or other.
 - Identify the main functional layers of the project.
 - Determine which top-level directories need their own `CLAUDE.md`.
@@ -39,6 +40,8 @@ Criterion for subdirectory `CLAUDE.md`:
 
 List every generated target in order — `AGENTS.md`, root `CLAUDE.md`, then each subdirectory `CLAUDE.md` — marking each target that already exists as "merge and rewrite". If the root `README.md` is missing, append it as "create from template". List every existing `README.md` or `docs/**/*.md` as "reconcile existing" and note that its section structure will be checked; never list a missing nested README or topic document as a generation target.
 
+When `--scope` is set, use the full inventory as read-only evidence but include only the exact scoped file or descendants of the scoped directory as write targets. The missing root `README.md` exception from Phase 1 remains valid when that exact file is the scope. Never plan a write outside the resolved scope.
+
 In `check`, print the analysis summary and the plan with those annotations, then return to the main workflow without writing. Otherwise print both before generating anything.
 
 ## Step 3: Generate the files
@@ -48,7 +51,7 @@ Generate the planned files in order: `AGENTS.md` → root `CLAUDE.md` → each s
 - Read the rules in `references/templates.md`, then use the corresponding file under `templates/`, including its line budget.
 - Assess each required section in the order defined by `references/templates.md`. Omit sections that fail the assessment and record the reason for Phase 6; never invent content or keep placeholder text.
 - Every rule must derive from the actual repository structure, files, and observable conventions. Do not fabricate rules.
-- Do not write a rule that only restates the global baseline read in Step 1.
+- Do not write a rule that only restates every applicable global baseline read in Step 1; a rule covered for only one client may still be required by another.
 - Place every fact in the file the [Single-source rule](#single-source-rule) assigns it to. When a fact's authoritative home is another file, write only a link to it or one line of context — never a restatement.
 - The `Never` section must cover the repository's most critical prohibitions.
 - Each subdirectory `CLAUDE.md` must carry at least one constraint absent from the root.
@@ -59,18 +62,18 @@ Generate the planned files in order: `AGENTS.md` → root `CLAUDE.md` → each s
 
 Re-read every generated file and every discovered `README.md` and `docs/**/*.md`. Build a fact-to-owner map using the [Single-source rule](#single-source-rule). For each duplicated fact, keep the complete statement only in its authoritative file; in every other file, delete it or replace it with a link or one line of context. Compare in five directions:
 
-1. **Generated content ↔ global baseline** — a rule that only restates `~/.claude/CLAUDE.md` is deleted, not reworded.
+1. **Generated content ↔ global baselines** — delete, rather than reword, a rule only when every supported client that needs it inherits an equivalent host-level rule.
 2. **Root `README.md` ↔ nested `README.md`** — repository-wide overview stays at the root; directory-specific overview stays in the nearest directory.
 3. **README files ↔ `docs/**/*.md`** — README files summarize and route; topic documents hold durable detail.
 4. **README/docs ↔ `AGENTS.md` / `CLAUDE.md`** — human or topic documentation does not restate agent-only operating rules, and agent files do not absorb human overview or detailed reference content.
 5. **`AGENTS.md` ↔ `CLAUDE.md`, root ↔ subdirectory** — an agent rule belongs at exactly one level and in exactly one file.
 
-In `update`, apply the necessary edits across this whole set and record every modified path. Preserve headings, surrounding prose, generated blocks, and unrelated formatting. Never remove the only copy of a fact when its authoritative destination does not exist or cannot be identified; leave it in place and let Phase 4 report the ownership problem instead.
+In `update`, apply the necessary edits only to the in-scope target set built in Step 2 and record every modified path. Use out-of-scope documents as evidence without rewriting them; report any cross-boundary reconciliation still needed as a deferred item in Phase 6. Preserve headings, surrounding prose, generated blocks, and unrelated formatting. Never remove the only copy of a fact when its authoritative destination does not exist or cannot be identified; leave it in place and let Phase 4 report the ownership problem instead.
 
 Then go line by line through the generated agent files and ask: would the agent get this wrong if this line were gone? If not, delete it. Apply the edits before leaving Phase 2.
 
 ## Step 5: Section structure pass
 
-Check every governed document that has a template — root and nested `README.md`, `docs/**/README.md`, `AGENTS.md`, and root or subdirectory `CLAUDE.md` — against its corresponding template and the necessity assessment in `references/templates.md`.
+Check every in-scope governed document that has a template — root and nested `README.md`, `docs/**/README.md`, `AGENTS.md`, and root or subdirectory `CLAUDE.md` — against its corresponding template and the necessity assessment in `references/templates.md`.
 
 Identify missing required sections (when their condition holds), empty or placeholder-only sections, sections that merely repeat content owned by another file, and repository-specific sections that fail the necessity assessment. In `update`, make only edits justified by the single-source rule, such as moving authoritative content or replacing a duplicate with a link. Do not invent content for a missing section. Pass every unresolved finding to Phase 4 as `[SECTION]`.
