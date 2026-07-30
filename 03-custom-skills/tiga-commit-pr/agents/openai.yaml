@@ -1,4 +1,7 @@
 interface:
-  display_name: "Tiga-Switch、Commit、Push、PR"
+  display_name: "Tiga-Commit、Push、PR"
   short_description: "分析 Git 变更并执行安全的提交、推送与 PR 工作流"
   default_prompt: "使用 $tiga-commit-pr 分析当前 Git 变更并执行安全的提交与 PR 流程。"
+
+policy:
+  allow_implicit_invocation: false

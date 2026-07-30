@@ -5,7 +5,7 @@ argument-hint: "switch|commit|pr|push [--dry-run]"
 arguments: [mode]
 disable-model-invocation: true
 allowed-tools: Bash(git restore --staged *)
-compatibility: Requires git and the GitHub CLI (gh)
+compatibility: Requires git; push/pr need an origin remote, and pr also needs the GitHub CLI (gh)
 ---
 
 Analyze the current repository state and generate the git/gh commands needed to switch branch, commit, and/or open a PR, staged by mode.
@@ -19,19 +19,19 @@ Analyze the current repository state and generate the git/gh commands needed to 
   - `commit` — generate switch + commit commands (Phase 1–3).
   - `pr` — generate switch + commit + push + PR commands (Phase 1–4).
   - `push` — commit on the **current branch** (Phase 1 + Phase 3), then push directly (Phase 5). Skips Phase 2 branch switching and Phase 4 PR. **Allowed even when the current branch is a base branch (`main`/`master`/`dev`)** — intended for solo-maintained repos where branch + PR ceremony is unnecessary.
-- `--dry-run` (optional): when present, only print the commands in fenced code blocks — do not execute anything and make no real changes. When absent (default), run each generated command directly via the Bash tool.
+- `--dry-run` (optional): when present, only print the commands in fenced code blocks — do not execute anything and make no real changes. When absent (default), run each generated command directly via the available shell tool.
 
-**No-argument behavior:** The mode argument is required; if `$mode` is empty or not one of `switch`/`commit`/`pr`/`push`, ask the user which mode they want via `AskUserQuestion` instead of guessing.
+**No-argument behavior:** The mode argument is required; if `$mode` is empty or not one of `switch`/`commit`/`pr`/`push`, ask the user which mode they want through the host's user-confirmation mechanism instead of guessing. If no structured mechanism is available, ask one concise plain-text question.
 
 ## Workflow
 
 ### Phase 1: Gather state (all modes)
 
-The state below was gathered before this run started — read it carefully and do **not** re-run these commands:
+At the start of every run, gather fresh state with the available shell tool:
 
-```!
+```bash
 git branch --show-current
-git status --porcelain
+git status --porcelain=v1
 git log --oneline -5
 git diff --cached --stat
 git diff --stat
@@ -39,9 +39,9 @@ git diff --stat
 
 Read it as: current branch name; machine-readable per-file state (staged / unstaged / untracked / deleted / renamed — the authoritative input for the staging protocol and execution fault tolerance below); recent commit style reference; staged change summary; unstaged change summary.
 
-The full diffs (`git diff --cached`, `git diff`) are **not** pre-injected — read them on demand with the Bash tool when the change analysis needs them.
+Read content diffs only on demand after the sensitive-path screening in Phase 3, limiting each command to the safe paths being analyzed. Do not rely on host-specific dynamic command injection or state captured by a previous invocation.
 
-**Repository guard:** if the injected output above is `fatal: not a git repository` (or otherwise shows no repository), report that this skill requires a git repository and stop — generate nothing.
+**Repository guard:** if the commands report `fatal: not a git repository` (or otherwise show no repository), report that this skill requires a git repository and stop — generate nothing.
 
 ### Phase 2: Branch check + switch (`switch`, `commit`, `pr` modes)
 
@@ -58,8 +58,8 @@ The allowed base branches are `main`, `master`, and `dev`. This phase decides wh
      ```
    - Follow the branch naming style already used in this repo (e.g. `feat/grouped-registry-and-zh-descriptions`, `refactor/restructure-and-draft-commit`, visible in `git log`).
 2. If the current branch is not an allowed base branch, do **not** abort — decide interactively:
-   - `switch` mode: ask via `AskUserQuestion` — the current branch is `<name>`, not `main`/`master`/`dev`; still create a new branch from here? If confirmed, generate the switch command as in step 1; otherwise stop without generating any commands.
-   - `commit` / `pr` mode, with pending changes (per `git status --porcelain`): ask via `AskUserQuestion` — create a new branch first, or commit on the current branch?
+   - `switch` mode: ask through the host's user-confirmation mechanism — the current branch is `<name>`, not `main`/`master`/`dev`; still create a new branch from here? If confirmed, generate the switch command as in step 1; otherwise stop without generating any commands.
+   - `commit` / `pr` mode, with pending changes (per `git status --porcelain=v1`): ask through the host's user-confirmation mechanism — create a new branch first, or commit on the current branch?
      - "Switch first": generate the switch command as in step 1, then continue to Phase 3.
      - "Stay on current branch": skip the switch command and continue to Phase 3 on the current branch.
    - `pr` mode, working tree clean: treat this as a **resume** run — no question needed; skip Phase 3 entirely and go straight to Phase 4 (push + create/update PR). This covers "branch was switched and committed in a previous run, now only push + PR is left" and "retry after a failed push".
@@ -71,7 +71,7 @@ The allowed base branches are `main`, `master`, and `dev`. This phase decides wh
 For `commit` and `pr` this runs in addition to Phase 2; for `push` it runs directly after Phase 1 on the current branch (no Phase 2). The change analysis, grouping, staging protocol, message drafting, and file-safety hard rules below apply identically in all three modes.
 
 1. **Analyze changes** — think deeply about what happened:
-   - Analyze the **full change set**: staged + unstaged + untracked files merged as one whole. Whether the user pre-staged some or all of it must not affect the analysis. Use `git diff --cached`, `git diff`, and `git status --porcelain` together to understand each file's content change and exact state.
+   - Analyze the **full change set**: staged + unstaged + untracked files merged as one whole. Whether the user pre-staged some or all of it must not affect the analysis. Start with `git status --porcelain=v1`; identify likely sensitive files (`.env`, credentials, keys) from their paths and exclude them without reading their contents. Confirm with the user before reading any such file or diff. Then use `git diff --cached -- <safe paths...>` and `git diff -- <safe paths...>` to understand each remaining file's content change and exact state.
    - Group related changes by purpose (feature, fix, refactor, docs, chore, etc.)
    - Identify file renames / moves (`renamed:`, or delete + add pairs with similar content)
    - Identify new files vs. modified files vs. deleted files
@@ -79,13 +79,15 @@ For `commit` and `pr` this runs in addition to Phase 2; for `push` it runs direc
    - Note any untracked files that likely should be included
 2. **Decide grouping automatically**:
    - If the groups have clearly independent purposes and no dependency on each other, split into multiple commits directly — **do not ask**. Order the logical groups, then for each group generate an independent `git add` + `git commit` block with its own Conventional Commits message (per step 4). Print a `[k/N]` group index before each block, and unless `--dry-run`, run the blocks in group order.
-   - If the group boundaries are ambiguous or the changes are coupled, ask how to proceed via `AskUserQuestion` (split into multiple commits / merge into one).
+   - If the group boundaries are ambiguous or the changes are coupled, ask how to proceed through the host's user-confirmation mechanism (split into multiple commits / merge into one).
    - If the changes cannot be meaningfully split, keep a single commit.
    - Exclude files that should not be committed (secrets, build artifacts, OS files).
 3. **Staging protocol** — respect what the user has already staged:
    - If pre-staged content exists **and** multiple commits are needed: the first generated command must be `git restore --staged .` to unstage everything. This touches **only the index, never working-tree files** — a staged deletion becomes an unstaged deletion, and the file stays deleted on disk exactly as the user left it.
    - Then for each group in order, generate `git add -A -- <group files...>` followed by its `git commit`. The `-A` + `--` pathspec form correctly stages deletions of files that no longer exist in the working tree.
    - If only a single commit is needed and the pre-staged content already matches the target scope: skip the restore step; just add whatever is missing (or commit directly if nothing is missing). Do not unstage and re-add for no reason.
+   - If only a single commit is needed but the pre-staged content includes excluded or out-of-scope paths, first run `git restore --staged -- <excluded paths...>`, then stage only missing in-scope paths.
+   - Before every commit, verify `git diff --cached --name-only` matches that commit group exactly. If any excluded, sensitive, or out-of-scope path remains staged, stop and correct the index without changing working-tree files.
 4. **Draft the commit message** — follow Conventional Commits format:
    - Use the type that best fits: `feat`, `fix`, `refactor`, `docs`, `chore`, `style`, `test`, `build`, `ci`.
    - If changes span multiple types, pick the dominant one or use a broader type with a descriptive scope.
@@ -116,7 +118,7 @@ These apply to every command this skill generates or executes:
 
 When Phase 2 classified this run as a resume (clean non-base branch), Phase 3 is skipped and this phase starts directly from the current branch state.
 
-1. **Check existing PR** — run `gh pr view --json url 2>/dev/null` or equivalent. If a PR already exists for this branch, tell the user and show its URL; still generate (or execute) the push step below so the existing PR gets updated, but skip steps 4–6 (`gh pr create`) — never create a duplicate.
+1. **Check existing PR** — run `gh pr view --json url` without suppressing errors. Exit code 0 means a PR exists: tell the user and show its URL, still generate (or execute) the push step below so the existing PR gets updated, and skip steps 4–6 (`gh pr create`). Continue to PR creation only when the command explicitly reports that no PR exists for the branch. For authentication, network, repository, or CLI failures, stop and report the error rather than risking a duplicate PR.
 2. **Analyze full branch range** — let `<base>` be this run's base branch as determined in Phase 2 (the allowed branch the run started from, or the merge-base-nearest of `main`/`master`/`dev`). If the branch has multiple commits ahead of `<base>`, run `git log <base>..HEAD --oneline` and `git diff <base>...HEAD --stat` to understand the complete scope of the branch, not just the latest diff. Use this combined with Phase 3's change analysis to inform the PR content.
 3. **Push** — generate:
    ```bash
@@ -150,7 +152,7 @@ This phase replaces Phase 4 for `push` mode. There is no branch switch (Phase 2 
 
 1. **Warn** — always print a one-line warning first (in both default (executing) and `--dry-run` modes):
    `⚠️ push 模式：将在当前分支 <name> 上提交并直接推送，跳过 PR`。
-   If `<name>` is a base branch (`main`/`master`/`dev`), extend the warning to state that this pushes directly to a protected branch with no PR review.
+   If `<name>` is a base branch (`main`/`master`/`dev`), extend the warning to state that this pushes directly to a base branch with no PR review.
 2. **Commit** — run Phase 3 exactly as written (change analysis, automatic grouping, staging protocol, Conventional Commit message, and the File-safety hard rules). `push` mode adds nothing to and removes nothing from Phase 3's commit behavior.
 3. **Clean-tree resume** — decide from the Phase 1 state:
    - Pending changes exist → do Phase 3 (step 2), then push.
@@ -164,14 +166,14 @@ This phase replaces Phase 4 for `push` mode. There is no branch switch (Phase 2 
 
 ## Execution mode behavior
 
-- **Read-only inspection commands** (`git status`, `git diff`, `git log`, `git branch`, `gh pr view`, etc.) may be run via the Bash tool in any mode — they are required for analysis.
-- **Default (no `--dry-run`)**: call the Bash tool to run each generated state-changing command in order — `switch`/`commit`/`pr` run switch → [commit steps] → [push + pr steps]; `push` runs [commit steps] → `git push` on the current branch. Before each command, state in one sentence what is about to happen.
+- **Read-only inspection commands** (`git status`, `git diff`, `git log`, `git branch`, `gh pr view`, etc.) may be run via the available shell tool in any mode — they are required for analysis.
+- **Default (no `--dry-run`)**: use the available shell tool to run each generated state-changing command in order — `switch`/`commit`/`pr` run switch → [commit steps] → [push + pr steps]; `push` runs [commit steps] → `git push` on the current branch. Before each command, state in one sentence what is about to happen.
 - **`--dry-run`**: only output the state-changing commands (`git switch`, `git restore --staged`, `git add`, `git commit`, `git push`, `gh pr create`) for the requested mode's phases, each in a fenced code block. Do not execute any of them; do not make any real changes.
 - **`push` mode authorization**: explicitly choosing `push` mode is itself the user's authorization to commit and push directly on the current branch, including a base branch (`main`/`master`/`dev`). Print the Phase 5 warning, then proceed — do **not** add a second confirmation.
-- **Staging command form**: all staging commands must use the `git add -A -- <paths>` form, and the path list must come from the actual `git status --porcelain` state gathered in Phase 1. Do not re-add files that are already staged in their target state.
-- **`git add` pathspec fault tolerance**: if a `git add` fails with a pathspec error (e.g. the path exists in neither the working tree nor the index because its deletion was already staged), do not stop immediately. Re-run `git status --porcelain` and check: if the file's intended change is in fact already staged, skip that command and continue with the remaining commands; otherwise apply the normal stop-on-failure handling below.
+- **Staging command form**: all staging commands must use the `git add -A -- <paths>` form, and the path list must come from the actual `git status --porcelain=v1` state gathered in Phase 1. Shell-quote every path exactly, especially paths containing spaces or leading hyphens. Do not re-add files that are already staged in their target state.
+- **`git add` pathspec fault tolerance**: if a `git add` fails with a pathspec error (e.g. the path exists in neither the working tree nor the index because its deletion was already staged), do not stop immediately. Re-run `git status --porcelain=v1` and check: if the file's intended change is in fact already staged, skip that command and continue with the remaining commands; otherwise apply the normal stop-on-failure handling below.
 - **Failure handling when executing**: for all other commands (switch / commit / push / pr create), if any command exits non-zero, stop immediately and do not run the remaining commands. Report which commands completed successfully, which one failed (with its error output), and which were not executed because of the failure.
-- **Confirmation boundary**: scope questions (e.g., the branch decision on a non-base branch in Phase 2, or resolving ambiguous commit grouping in Phase 3) may use `AskUserQuestion` in any mode. What default execution forbids is per-command execution confirmation — the user invoking this skill is itself the authorization for this call's scope.
+- **Confirmation boundary**: ask scope questions (e.g., the branch decision on a non-base branch in Phase 2, or resolving ambiguous commit grouping in Phase 3) through the host's user-confirmation mechanism in any mode, falling back to one concise plain-text question when needed. What default execution forbids is per-command execution confirmation — the user invoking this skill is itself the authorization for this call's scope.
 
 ## Rules
 
