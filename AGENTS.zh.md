@@ -13,7 +13,7 @@ Tiga-Skills 通过扁平符号链接注册外部和自定义 Agent Skills，并�
 | `SKILLS-INDEX.md` | 指向 `~/Projects/AG-Tools/SKILLS-INDEX.md` 的符号链接，即 AG-Tools 全仓库技能索引 | derived |
 | `SKILLS-REFS.md` | 指向 `~/Projects/AG-Tools/SKILLS-REFS.md` 的符号链接，即下游引用清单 | derived |
 
-表中只列用途或权属无法一望而知的路径，其余目录本身即可说明自己。仓库只维护根目录的治理文件 —— 除非用户要求，不要创建子目录 `CLAUDE.md`。
+表中只列用途或权属无法一望而知的路径，其余目录本身即可说明自己。已注册技能的成品清单见 `README.md`。仓库只维护根目录的治理文件 —— 除非用户要求，不要创建子目录 `CLAUDE.md`。
 
 ## 命令
 
@@ -37,6 +37,7 @@ Tiga-Skills 通过扁平符号链接注册外部和自定义 Agent Skills，并�
 - 注册、移除和用户级链接配置一律走 `./04-scripts/manage-skills.sh` —— 手工改动链接会让注册状态、用户级发现和 README 元数据彼此脱节。
 - 让 `descriptions-zh.conf` 与各技能的实际行为保持一致；其中 `<name>.description` 是 README 技能表描述列的来源，`<name>.arguments` 则是技能缺少 `argument-hint` frontmatter 时参数列的兜底（外部技能的源文件不可编辑）。
 - 任何注册、移除或 `descriptions-zh.conf` 变更之后，先运行 `update-readme`，再运行 `check`。
+- 修改任何 shell 脚本后运行 `bash -n` —— 本仓库没有测试套件。
 
 **先询问：**
 

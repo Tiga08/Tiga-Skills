@@ -1,75 +1,46 @@
-# Templates
+# Template Conventions
 
-Templates for the governance files generated in Phase 2 of tiga-govsync.
+Rules for using the file-backed governance-document templates in Phase 2 and for assessing their section structures in Phases 2 and 4 of tiga-govsync.
+
+## Template catalog
+
+| Target | Template |
+| --- | --- |
+| `AGENTS.md` | `templates/agents-template.md` |
+| Root `CLAUDE.md` | `templates/claude-root-template.md` |
+| Subdirectory `CLAUDE.md` | `templates/claude-subdir-template.md` |
+| Root `README.md` | `templates/readme-root-template.md` |
+| Nested `README.md` outside `docs/` | `templates/readme-nested-template.md` |
+| `docs/**/README.md` | `templates/docs-index-template.md` |
+
+Topic documents under `docs/` have no template. Use the catalog templates as generation inputs where generation is allowed and as structural baselines for existing governed documents.
 
 ## Line budgets
 
-Target `AGENTS.md` ≤ 60 lines, root `CLAUDE.md` ≤ 40 lines, subdirectory `CLAUDE.md` ≤ 25 lines. These are targets, not hard cuts — when a file runs over, drop content by asking of each line "would the agent get this wrong without it?", never by truncating.
+| Target | Budget |
+| --- | --- |
+| `AGENTS.md` | ≤ 60 lines |
+| Root `CLAUDE.md` | ≤ 40 lines |
+| Subdirectory `CLAUDE.md` | ≤ 25 lines |
+| Root `README.md` | ≤ 120 lines |
+| Nested `README.md` outside `docs/` | ≤ 60 lines |
+| `docs/**/README.md` | ≤ 40 lines |
 
-## AGENTS.md Template
+These are targets, not hard cuts. When a file runs over, apply the necessity assessment below to each section and line; never truncate content.
 
-```markdown
-# [Repo name — one-line positioning]
+## Template conventions
 
-[One paragraph: repository purpose, tech stack, and core constraints.]
+- The first line is an HTML comment naming the target and line budget. When materializing a real file, delete every HTML comment and every bracketed guidance line.
+- The first guidance line for each section starts with `Required.` or `Required if <condition>.` Templates list only required sections, never optional ones.
+- Every template ends with the same note: repository-specific sections are allowed only when they pass the necessity assessment below, follow all required sections, and keep the file within its line budget. Remove that HTML comment when materializing the file.
+- Every template must respect the ownership table in `references/generate.md`. A fact owned by another file appears only as a link or one line of context.
 
-## Structure
+## Section necessity assessment
 
-| Path | Purpose | Authority |
-|------|---------|-----------|
-| `dir/` | One-line description | primary / derived / config |
+Apply these questions in order to every required or repository-specific section:
 
-[Include only entries whose purpose or authority cannot be read off the path name and its contents. The Authority column marks how authoritative each entry is — a `derived` path that must never be edited directly is exactly the kind of row worth a table row; a self-describing directory is not.]
-[Order the rows with directory entries first, then file entries; sort each group lexicographically by name.]
-[If a subdirectory has its own CLAUDE.md, note it below the table, with one line stating that its rules win over this file inside that directory.]
+1. Does this repository have truthful content for the section? If not, omit the whole section. A required section with nothing real to say is evidence that the file itself may not need to exist; never fill it with placeholders.
+2. Under the Single-source rule, is this file the authoritative home for that content? If not, keep only a link and at most one sentence of context.
+3. Would a reader or agent make a mistake without the section? If not, delete it.
 
-## Commands
-
-[Optional section. List only commands an agent cannot guess — repository-specific scripts and non-default invocations. Omit the section entirely when every relevant command is the ecosystem default.]
-
-## Boundaries
-
-**Always:**
-
-[3–5 mandatory behaviors for this repository.]
-
-**Ask First:**
-
-[3–5 operations requiring user confirmation.]
-
-**Never:**
-
-[3–5 strictly prohibited operations.]
-
-[Write only entries that hold in *this* repository specifically. If a rule reads just as true in any other repository, it belongs to the global config — leave it out.]
-```
-
-## Root CLAUDE.md Template
-
-```markdown
-@AGENTS.md
-
-## Constraints
-
-[1–5 operational constraints for the root project, each derived from this repository's own structure or conventions.]
-
-## Common Gotchas
-
-[1–5 pitfalls that newcomers, including AI agents, actually hit in this repository.]
-
-Format each item as:
-
-1. **Short title.** Explain why it is a pitfall and describe the correct approach.
-```
-
-## Subdirectory CLAUDE.md Template
-
-```markdown
-# [Directory name] — Operational Rules
-
-[One paragraph: responsibilities and ownership semantics.]
-
-## Rules
-
-[3–5 operational rules specific to this directory. At least one must be a constraint that is not already present in the root `CLAUDE.md`.]
-```
+Record every omitted required section and its reason in the Phase 6 summary.

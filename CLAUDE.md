@@ -2,12 +2,11 @@
 
 ## Constraints
 
-- Keep this a content-and-Bash repository. Do not introduce an application framework, build system, or runtime dependency unless the user asks for one.
-- Keep scripts executable UTF-8 Bash in the existing direct-command style, and run `bash -n` on any shell script you modify.
+- Keep scripts executable UTF-8 Bash in the existing direct-command style.
 
 ## Common Gotchas
 
-1. **Confusing the three skill locations.** `.agents/skills/` holds project-operation skills, `03-custom-skills/` holds custom registry sources, and `02-agent-skills/` holds only registration symlinks. Resolve a registry link to its target before deciding which source is safe to edit.
+1. **Assuming a `02-agent-skills/` entry lives in this repository.** Some links resolve to `03-custom-skills/`, others to external AG-Tools forks, and the entry name does not say which. Resolve a link to its target before editing anything behind it.
 
 2. **Treating `.tiga/` as project content.** It is git-ignored and never authoritative; personal plans live in `.tiga/Todo.md`. Promote anything out of it only when the user explicitly asks.
 

@@ -1,92 +1,90 @@
 ---
 name: tiga-govsync
-description: Maintain a repository's governance docs end to end — generate or rebuild AGENTS.md / CLAUDE.md from actual repo evidence, sync Simplified Chinese translations of every SKILL.md / AGENTS.md / CLAUDE.md by invoking tiga-translate, and audit the docs against real repository state. With --skills it also checks the repository's own SKILL.md files against the official Agent Skills spec. Modes: check (read-only report of what is missing, stale, or inconsistent), update (rebuild governance files and sync all translations), fix (audit, then apply fixes interactively). Use when governance docs or their Chinese versions have drifted from the repository, or when a repo needs governance files created.
-argument-hint: "check|update|fix [--force] [--scope <path>] [--no-translate] [--skills]"
-arguments: [mode]
+description: "Govern repository-owned README, docs, and agent instruction files against repository evidence and a single-source ownership model, synchronize Simplified Chinese translations, and optionally audit local skills. Use when governance documents are missing, stale, duplicated, structurally inconsistent, or out of sync with the repository."
+argument-hint: "check|update|fix [--scope <path>] [--no-translate] [--skills]"
 disable-model-invocation: true
 ---
 
-Keep a repository's governance documents and their Simplified Chinese translations in step with the repository's actual state, in one pass.
+Keep a repository's governance documents and their Simplified Chinese translations in step with the repository's actual state and keep each fact in one authoritative file.
 
-**Arguments:** the first positional argument is the mode; flags may appear anywhere. With no arguments, run `check` and close the output by listing all three modes so the user can pick the one they meant.
+**Arguments:** parse the mode and flags from `$ARGUMENTS`; flags may appear before or after the mode. With no arguments, run `check` and close the output by listing all three modes so the user can pick the one they meant.
 
-本次调用：`$ARGUMENTS` — 模式 `$mode`
+本次调用：`$ARGUMENTS`
 
 Modes:
 
-- `check`: read-only. Report which governance files are missing or would be rebuilt, which translations are missing or stale, and what the audit finds. Writes nothing.
-- `update`: rebuild the governance files (merging still-valid old rules), sync translations of every `SKILL.md` / `AGENTS.md` / `CLAUDE.md`, then run a read-only audit.
-- `fix`: audit, apply fixes interactively, then sync translations of the governance files that were modified.
+- `check`: read-only. Report which agent-governance files are missing or would be rebuilt, which existing README/docs files need reconciliation, which translations are missing or stale, and what the audit finds. Writes nothing.
+- `update`: rebuild `AGENTS.md` / `CLAUDE.md` (merging still-valid old rules), reconcile every existing project-owned `README.md` and `docs/**/*.md`, run a read-only audit, then sync translations of every project-owned `SKILL.md` / `AGENTS.md` / `CLAUDE.md`.
+- `fix`: audit, apply fixes interactively, then sync translations of the modified `SKILL.md` / `AGENTS.md` / `CLAUDE.md` files.
 
 Flags:
 
-- `--force`: passed through to `tiga-translate` — force full re-translation instead of incremental updates.
-- `--scope <path>`: limit generation, translation, and audit to one path (a file or directory). To cover two paths, run the skill twice.
-- `--no-translate`: skip the translation phase (Phase 3).
-- `--skills`: additionally check the repository's own `SKILL.md` files against the official Agent Skills spec (Phase 4). Without it, that phase does not run at all.
+- `--scope <path>`: limit generation, translation, skill checks, and document audit to one path (a file or directory). To cover two paths, run the skill twice.
+- `--no-translate`: skip the translation phase (Phase 5).
+- `--skills`: additionally check the repository's own `SKILL.md` files against the cross-client Agent Skills profile (Phase 3). Without it, that phase does not run at all.
 
 ## Workflow
 
 ### Phase 1: Preflight
 
-1. Locate the repository root with `git rev-parse --show-toplevel`. If the command fails, report that this skill requires a git repository — translation freshness and staleness detection both read the git timeline, and a committed baseline is what makes a rebuild revertible — and stop.
-2. Take `$mode` as the mode and collect the flags from `$ARGUMENTS`. An unrecognized mode is an error: report it, list the three valid modes, and stop. When `$mode` is empty, use `check`.
+1. Locate the repository root with `git rev-parse --show-toplevel`. If the command fails, report that this skill requires a git repository because translation freshness and staleness detection read the git timeline, then stop.
+2. Parse `$ARGUMENTS`. Accept at most one mode token (`check`, `update`, or `fix`) anywhere in the argument list; default to `check`. Parse `--scope <path>`, `--no-translate`, and `--skills`; reject unknown flags, missing flag values, or conflicting mode tokens.
+3. If `--scope` is set, resolve it without following a symlink outside the repository. Require the resolved path to stay inside the repository root. An absent path is valid only when it is the root `README.md` targeted for preview or creation and its parent is the repository root; otherwise report it and stop.
+4. Snapshot the pre-existing working-tree state with `git status --short`, including staged, unstaged, and untracked paths. In a writing mode, never overwrite a pre-existing dirty target blindly: preserve its content during the merge, show the proposed diff, and ask before replacing or removing any of it. If the host cannot request confirmation, skip that target and report why.
+5. `check` is strictly read-only: do not create output directories, touch files, or invoke a workflow that may write.
 
 ### Phase 2: Generate
 
 Runs in `update`, and as a read-only preview in `check`. Skipped in `fix`.
 
-Read [generate.md](${CLAUDE_SKILL_DIR}/references/generate.md) and follow it. It covers repository analysis, the global baseline, the criterion for subdirectory `CLAUDE.md` files, the generation plan, the merge-on-overwrite rule, and the deduplication pass. The templates and their line budgets live in [templates.md](${CLAUDE_SKILL_DIR}/references/templates.md).
+Read [generate.md](references/generate.md) and follow it. It covers governance-document discovery, repository analysis, the personal Claude global baseline, the single-source ownership rule, the criterion for subdirectory `CLAUDE.md` files, the generation plan, the merge-on-overwrite rule, cross-document reconciliation, and section-structure governance. Template rules and line budgets live in [templates.md](references/templates.md); the templates themselves live under `templates/`.
 
-Existing files are merged and rewritten without prompting: merge-on-overwrite preserves the old rules that still hold, and Phase 1 has already established a git repository, so any rewrite is revertible.
+Existing clean files are merged and rewritten without prompting; pre-existing dirty targets follow the Phase 1 confirmation guard. Merge-on-overwrite preserves old rules that still hold, and reconciliation changes only facts that violate the ownership model. Create a missing root `README.md` from its template; never create a missing nested `README.md` or topic document under `docs/`.
 
-Record the paths of the files actually written — Phase 3 takes them as input.
+Record the paths of the files actually written for the Phase 5 summary and translation plan.
 
-### Phase 3: Translate
-
-Runs in `update` and `fix`. In `check` it degrades to the freshness check below. Skipped entirely when `--no-translate` is set — print that as the reason.
-
-**Build the whitelist:**
-
-1. Start from the governance files written in Phase 2 (in `fix`, from the files modified in Phases 4 and 5 instead).
-2. In `update`, add every `SKILL.md` found by `find . -name SKILL.md -not -path './.git/*'`, plus every `AGENTS.md` and `CLAUDE.md` at any directory level.
-3. Do **not** pass `-L` to `find`. Symlinked directories such as `02-agent-skills/`, `.claude/skills`, and `.codex/skills` must not be followed — external upstream sources are never to be modified.
-4. Exclude files whose names end in `.zh.md` or `-zh.md`.
-5. If `--scope` is set, keep only whitelist entries under the given path.
-
-**Translate:** invoke the `tiga-translate` skill via the Skill tool once, passing the entire whitelist as arguments, plus `--force` when it is set. Its incremental mode prints "already up to date" and spends nothing on unchanged files, so a full whitelist stays cheap.
-
-Its output rules apply unchanged: `AGENTS.md` / `CLAUDE.md` become `.zh.md` next to the source; `SKILL.md` becomes `.tiga/translations/{parent-dir-name}-SKILL.md`.
-
-**Freshness check (`check` only):** do not invoke tiga-translate. For each whitelist entry, compute its output path per the rules above and classify it as **missing translation** (no output file), **stale translation**, or **up to date** — judging staleness by the same baseline criterion tiga-translate applies, documented in its `SKILL.md`. Print the three groups as lists.
-
-### Phase 4: Skill Spec
+### Phase 3: Skill Spec
 
 Runs only when `--skills` is set. Without the flag, skip it silently — the rest of the workflow is unchanged.
 
-**Discovery:** `.agents/skills/*/SKILL.md` and `03-custom-skills/*/SKILL.md`. Skip a directory that does not exist and say so. As in Phase 3, do **not** pass `-L` to `find`: symlink directories such as `02-agent-skills/`, `.claude/skills`, and `.codex/skills` are never followed, because the skills behind them belong to upstream repositories. `--scope` narrows the set.
+**Discovery:** find project-owned `SKILL.md` files in standard `.agents/skills/` directories and repository-owned source directories such as `03-custom-skills/`. Use the project-owned inventory from `git ls-files -co --exclude-standard`; do not traverse symlink registries, dependencies, vendored trees, generated output, or ignored paths. `--scope` narrows the set.
 
-Read [skill-spec.md](${CLAUDE_SKILL_DIR}/references/skill-spec.md) and follow it. It covers the frontmatter field table, the `[MISSING]` / `[UNKNOWN]` / `[MISMATCH]` / `[STALE]` / `[BLOAT]` checks, the report, and the fix flow.
+Read [skill-spec.md](references/skill-spec.md) and follow it. It separates the portable Agent Skills core, Claude Code extensions, and Codex `agents/openai.yaml`, then defines the `[MISSING]` / `[UNKNOWN]` / `[MISMATCH]` / `[STALE]` / `[BLOAT]` checks and fix flow.
 
-In `check` the phase reports only. In `update` apply the fixes directly; in `fix` confirm each one first. Any `SKILL.md` actually modified goes back to Phase 3 for a translation sync.
+In `check` the phase reports only. In `update` apply fixes directly except where the preflight dirty-target guard requires confirmation; in `fix` confirm each fix first. Record the containing directory of every modified `SKILL.md` for Phase 5; never record a bare `SKILL.md` path.
 
-If `./04-scripts/manage-skills.sh` exists in the repository, also run `./04-scripts/manage-skills.sh check` and fold its result into the report — it enforces the mechanical half of the same rules, and two separate verdicts would only contradict each other.
+If `./04-scripts/manage-skills.sh` exists, also run `./04-scripts/manage-skills.sh check` and report its registry/link health separately from the specification verdict.
 
-### Phase 5: Audit
+### Phase 4: Audit
 
 Runs in all three modes.
 
-Read [audit.md](${CLAUDE_SKILL_DIR}/references/audit.md) and follow it. It covers the discovery inputs, the `[PHANTOM]` / `[MISSING]` / `[STALE]` / `[MISMATCH]` checks, the report, the fix priority order, and the interactive fix flow.
+Read [audit.md](references/audit.md) and follow it. It covers the discovery inputs, the `[PHANTOM]` / `[MISSING]` / `[STALE]` / `[MISMATCH]` / `[SECTION]` / `[DUPLICATE]` checks, the report, the fix priority order, and the interactive fix flow.
 
-In `check` and `update`, the audit reports only and writes nothing. In `fix`, run the interactive fix flow after the report, then return to Phase 3 with the list of modified governance files (`CLAUDE.md` / `AGENTS.md` at any level) to sync their translations. Do not pass `README.md` or `docs/` files — their translations land in the git-ignored `.tiga/translations/`, so syncing them has no lasting effect.
+In `check` and `update`, the audit reports only and writes nothing. In `fix`, run the interactive fix flow after the report and record modified `CLAUDE.md` / `AGENTS.md` paths for Phase 5. Do not add modified `README.md` or `docs/` files to the translation whitelist.
 
 `--scope` narrows the set of audited documents.
+
+### Phase 5: Translate
+
+Runs after every phase that may write. In `check` it performs only the freshness calculation below. Skip it entirely when `--no-translate` is set and print that reason.
+
+**Build the whitelist:**
+
+1. In `check` and `update`, discover every project-owned `SKILL.md`, `AGENTS.md`, and `CLAUDE.md` from `git ls-files -co --exclude-standard`. Exclude Chinese variants, ignored paths, dependencies, vendored or generated trees, and anything reached through a symlink registry. Convert each selected `SKILL.md` to its containing directory; keep `AGENTS.md` and `CLAUDE.md` as files.
+2. In `fix`, start from only the translation-eligible paths modified in Phases 3 and 4, converting each `SKILL.md` to its containing directory.
+3. Apply `--scope` to source paths before conversion. When the scope is a skill directory, its `SKILL.md`, or any descendant of that skill directory, select the whole skill directory so mirrored output paths remain stable. Otherwise keep only governance files inside the scope.
+4. Deduplicate resolved paths and detect distinct skill directories with the same basename as an output collision before invoking translation.
+
+**Translate (`update` / `fix`):** invoke the available `tiga-translate` skill once through the host's skill-invocation mechanism, passing the full whitelist. Its routing rules remain authoritative: `AGENTS.md` / `CLAUDE.md` become sibling `.zh.md` files, while a skill directory mirrors under `.tiga/translations/<skill-dir-name>/`.
+
+**Freshness check (`check`):** do not invoke `tiga-translate`. Read its `SKILL.md`, compute every expected output using the same routing and baseline rules, and classify each as **missing translation**, **stale translation**, or **up to date**. Expanding a skill directory includes each translation-eligible Markdown file inside it. Print all three groups and their counts without creating directories.
 
 ### Phase 6: Summary
 
 Print a final summary covering:
 
-- Governance files generated, skipped (with reason), or failed.
+- Governance files generated, reconciled, skipped (with reason), or failed, including every omitted required section and its reason.
 - Translation results counted by status: new / incremental update / already up to date / full re-translation / failed. In `check`, the missing / stale / up-to-date counts instead.
 - Skill spec findings counted by category (`--skills` only), and which fixes were applied vs. skipped.
 - Audit findings counted by category, and which fixes were applied vs. skipped.

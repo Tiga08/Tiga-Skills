@@ -13,7 +13,7 @@ Tiga-Skills registers external and custom Agent Skills through flat symlinks and
 | `SKILLS-INDEX.md` | Symlink to `~/Projects/AG-Tools/SKILLS-INDEX.md`, the AG-Tools-wide skill index | derived |
 | `SKILLS-REFS.md` | Symlink to `~/Projects/AG-Tools/SKILLS-REFS.md`, the downstream-reference list | derived |
 
-The table lists only paths whose purpose or authority is not self-evident; the rest of the tree describes itself. Only root-level governance files are maintained — do not create subdirectory `CLAUDE.md` files unless the user asks.
+The table lists only paths whose purpose or authority is not self-evident; the rest of the tree describes itself. The rendered catalog of registered skills lives in `README.md`. Only root-level governance files are maintained — do not create subdirectory `CLAUDE.md` files unless the user asks.
 
 ## Commands
 
@@ -37,6 +37,7 @@ For a path under `$HOME`, `add` writes a user-portable relative symlink (e.g. `.
 - Route registration, removal, and user-level link setup through `./04-scripts/manage-skills.sh` — hand-made link changes leave registration, user-level discovery, and README metadata out of sync.
 - Keep `descriptions-zh.conf` aligned with what each skill actually does; its `<name>.description` is what the README table's description column is built from, and `<name>.arguments` is the fallback for the parameter column when a skill has no `argument-hint` frontmatter (external skills, whose sources must not be edited).
 - After any registration, removal, or `descriptions-zh.conf` change, run `update-readme`, then `check`.
+- Run `bash -n` on any shell script you modify — the repository has no test suite.
 
 **Ask First:**
 
