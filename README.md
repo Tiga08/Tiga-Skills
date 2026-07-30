@@ -92,6 +92,7 @@ my-skill.arguments=<file> [--flag]
 | tiga-govsync | check\|update\|fix [--scope <path>] [--no-translate] [--skills] | 依据仓库实况和单一权威来源模型治理项目自有 README、docs 与 Agent 指令文件，同步简体中文译文，并可审计本地 Skill。适用于治理文档缺失、陈旧、重复、章节结构不一致或与仓库状态脱节的情况。 |
 | tiga-local-skills | init\|add\|update\|remove\|list [args] | 管理当前项目 `.agents/skills/` 中供 Claude Code 与 Codex 共享的项目级 skills，支持初始化、导入、更新、移除与列出；增删 AG-Tools 来源条目时同步维护其 SKILLS-REFS.md 下游引用清单。 |
 | tiga-translate | <path...> | 翻译 Markdown 文件或目录前先判断需要翻译的内容与数量，再按文档类型自动放置简体中文译文；可手动调用，也可由 `tiga-govsync` 等其他技能调用。 |
+| tiga-update-skills | — | 依据 Claude Code、Codex 与 Agent Skills 官方规范审查并更新本地 Skill，检查结构、兼容性、元数据、调用策略与规范漂移，并可刷新官方文档快照后自审自身。 |
 
 ### baoyu-skills
 
