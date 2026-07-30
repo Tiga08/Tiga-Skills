@@ -1,4 +1,6 @@
 interface:
-  display_name: "Tiga 项目级 Skill 管理"
+  display_name: "Tiga-管理项目级 Skill"
   short_description: "管理项目级 skill 的初始化、导入、更新、移除与列表"
   default_prompt: "使用 $tiga-local-skills 列出并管理当前项目的 skill。"
+policy:
+  allow_implicit_invocation: false
