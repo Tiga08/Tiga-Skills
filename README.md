@@ -88,20 +88,11 @@ my-skill.arguments=<file> [--flag]
 
 | 名称 | 参数 | 描述 |
 | ---- | ---- | ---- |
-| tiga-commit-pr | switch\|commit\|pr\|push [--dry-run] | 分析当前 Git 改动或已有分支提交，按模式准备分支、Conventional Commit、推送和 PR 流程；`push` 在当前分支直接提交并推送、跳过分支切换与 PR（面向个人独享仓库）；默认执行安全命令，保留工作区文件和已有暂存状态。 |
+| tiga-commit-push-pr | switch\|commit\|pr\|push [--dry-run] | 安全分析并执行 Git 分支切换、Conventional Commit、推送与 PR 工作流，适用于提交当前改动、直接推送当前分支或创建和更新 PR。 |
 | tiga-govsync | check\|update\|fix [--scope <path>] [--no-translate] [--skills] | 依据仓库实况和单一权威来源模型治理项目自有 README、docs 与 Agent 指令文件，同步简体中文译文，并可审计本地 Skill。适用于治理文档缺失、陈旧、重复、章节结构不一致或与仓库状态脱节的情况。 |
 | tiga-local-skills | init\|add\|update\|remove\|list [args] | 管理当前项目 `.agents/skills/` 中供 Claude Code 与 Codex 共享的项目级 skills，支持初始化、导入、更新、移除与列出；增删 AG-Tools 来源条目时同步维护其 SKILLS-REFS.md 下游引用清单。 |
 | tiga-translate | <path...> | 翻译 Markdown 文件或目录前先判断需要翻译的内容与数量，再按文档类型自动放置简体中文译文；可手动调用，也可由 `tiga-govsync` 等其他技能调用。 |
 | tiga-update-skills | — | 依据 Claude Code、Codex 与 Agent Skills 官方规范审查并更新本地 Skill，检查结构、兼容性、元数据、调用策略与规范漂移，并可刷新官方文档快照后自审自身。 |
-
-### baoyu-skills
-
-来源于外部路径，通过 `add` 命令注册
-
-| 名称 | 参数 | 描述 |
-| ---- | ---- | ---- |
-| baoyu-format-markdown | <file> [--quotes\|-q] [--no-quotes] [--spacing\|-s] [--no-spacing] [--emphasis\|-e] [--no-emphasis] | 将纯文本或 Markdown 优化为带 frontmatter、标题、摘要、层级、列表和代码块的 `{filename}-formatted.md`，也可选择保留原结构或仅原地修正排版。 |
-| baoyu-url-to-markdown | <url> [--output <path>] [--format markdown\|json] [--adapter x\|youtube\|hn\|generic] [--headless] [--wait-for none\|interaction\|force] ... | 通过 Chrome 抓取网页并用 X、YouTube、Hacker News 或通用适配器转换为 Markdown/JSON，可按需等待登录或人工交互后再抓取。 |
 
 ### ECC-skills
 
@@ -112,5 +103,14 @@ my-skill.arguments=<file> [--flag]
 | security-scan | scan [<path>]\|init [--min-severity <level>] [--format json\|markdown\|html] [--fix] [--opus] [--stream] | 使用 AgentShield 扫描 `.claude/` 中的 CLAUDE.md、settings.json、MCP、hooks 和 agent 定义，发现安全漏洞、配置错误与注入风险，也可初始化安全配置。 |
 | skill-scout | — | 在创建、复刻或扩展 skill 前搜索并审查本地、marketplace、GitHub 和 Web 候选；无固定命令参数，调用时提供目标任务、触发条件、涉及领域与关键词。 |
 | skill-stocktake | [full] | 按统一质量清单审查全局及当前项目的 Claude skills 和 commands，依据缓存自动执行增量 Quick Scan 或完整盘点，当前工作目录决定项目级扫描范围。 |
+
+### baoyu-skills
+
+来源于外部路径，通过 `add` 命令注册
+
+| 名称 | 参数 | 描述 |
+| ---- | ---- | ---- |
+| baoyu-format-markdown | <file> [--quotes\|-q] [--no-quotes] [--spacing\|-s] [--no-spacing] [--emphasis\|-e] [--no-emphasis] | 将纯文本或 Markdown 优化为带 frontmatter、标题、摘要、层级、列表和代码块的 `{filename}-formatted.md`，也可选择保留原结构或仅原地修正排版。 |
+| baoyu-url-to-markdown | <url> [--output <path>] [--format markdown\|json] [--adapter x\|youtube\|hn\|generic] [--headless] [--wait-for none\|interaction\|force] ... | 通过 Chrome 抓取网页并用 X、YouTube、Hacker News 或通用适配器转换为 Markdown/JSON，可按需等待登录或人工交互后再抓取。 |
 
 <!-- END SKILL LIST -->
