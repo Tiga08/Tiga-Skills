@@ -1,6 +1,6 @@
 # Tiga-Skills: Centralized Agent Skills Repository
 
-Tiga-Skills registers external and custom Agent Skills through flat symlinks and exposes them to Claude Code and Codex. It holds content and Bash only — no application code, build system, or runtime dependency. The core constraint: `02-agent-skills/` is a symlink registry, custom skill sources live in `03-custom-skills/`, and every registration or removal goes through `./04-scripts/manage-skills.sh`.
+Tiga-Skills registers external and custom Agent Skills through flat symlinks and exposes them to Claude Code and Codex. It holds content, Bash, and standard-library Python utilities — no application code, build system, or package-managed runtime. The core constraint: `02-agent-skills/` is a symlink registry, custom skill sources live in `03-custom-skills/`, and every registration or removal goes through `./04-scripts/manage-skills.sh`.
 
 ## Structure
 
@@ -13,7 +13,7 @@ Tiga-Skills registers external and custom Agent Skills through flat symlinks and
 | `SKILLS-INDEX.md` | Symlink to `~/Projects/AG-Tools/SKILLS-INDEX.md`, the AG-Tools-wide skill index | derived |
 | `SKILLS-REFS.md` | Symlink to `~/Projects/AG-Tools/SKILLS-REFS.md`, the downstream-reference list | derived |
 
-The table lists only paths whose purpose or authority is not self-evident; the rest of the tree describes itself. The rendered catalog of registered skills lives in `README.md`. Only root-level governance files are maintained — do not create subdirectory `CLAUDE.md` files unless the user asks.
+The table lists only paths whose purpose or authority is not self-evident; the rest of the tree describes itself. The rendered catalog of registered skills lives in `README.md`.
 
 ## Commands
 
@@ -27,7 +27,7 @@ The table lists only paths whose purpose or authority is not self-evident; the r
 ./04-scripts/manage-skills.sh update-readme              # regenerate the README skill table
 ```
 
-For a path under `$HOME`, `add` writes a user-portable relative symlink (e.g. `../../../AG-Tools/...`), assuming this repository sits at `~/Projects/Tiga/Skills` and AG-Tools at `~/Projects/AG-Tools`.
+For a path under `$HOME`, `add` writes a user-portable relative symlink (e.g. `../../../AG-Tools/...`); the required checkout layout is documented in the root `README.md`.
 
 ## Boundaries
 
@@ -37,13 +37,14 @@ For a path under `$HOME`, `add` writes a user-portable relative symlink (e.g. `.
 - Route registration, removal, and user-level link setup through `./04-scripts/manage-skills.sh` — hand-made link changes leave registration, user-level discovery, and README metadata out of sync.
 - Keep `descriptions-zh.conf` aligned with what each skill actually does; its `<name>.description` is what the README table's description column is built from, and `<name>.arguments` is the fallback for the parameter column when a skill has no `argument-hint` frontmatter (external skills, whose sources must not be edited).
 - After any registration, removal, or `descriptions-zh.conf` change, run `update-readme`, then `check`.
-- Run `bash -n` on any shell script you modify — the repository has no test suite.
+- Keep `04-scripts/*.sh` executable UTF-8 Bash in the existing direct-command style, and run `bash -n` on any shell script you modify. Invoke skill-local Python helpers through `python3` and follow their owning `SKILL.md`; there is no shared test suite.
 
 **Ask First:**
 
 - Creating or deleting skills, prompts, or scripts.
 - Registering, removing, or renaming a skill.
 - Pulling or registering content from an external upstream repository — inspect its status first.
+- Creating a subdirectory `CLAUDE.md`; this repository intentionally keeps governance at the root unless the user requests a narrower file.
 
 **Never:**
 
@@ -51,3 +52,4 @@ For a path under `$HOME`, `add` writes a user-portable relative symlink (e.g. `.
 - Create or delete symlinks under `02-agent-skills/` by hand, bypassing `manage-skills.sh`.
 - Hand-edit the README block between `<!-- BEGIN SKILL LIST -->` and `<!-- END SKILL LIST -->`.
 - Fabricate skill names, sources, or descriptions.
+- Reintroduce retired top-level layouts such as `00-skill-index/`, `03-workflows/`, or `05-custom-skills/`.

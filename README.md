@@ -1,76 +1,39 @@
 # Tiga-Skills
 
-集中式技能管理中心，通过软链接聚合来自外部仓库和自定义目录的 Agent Skills，并提供给 Claude Code 和 Codex 使用。
+集中式 Agent Skills 注册与分发仓库，让 Claude Code 和 Codex 共用一套项目级、外部与自定义技能。
 
-## 目录结构
+Tiga-Skills 通过符号链接聚合技能源，并用 Bash 管理入口维护注册、检查和技能清单；仓库还包含 Skill 自带的无第三方依赖 Python 辅助工具，不含应用代码或构建系统。
 
-```
-Tiga-Skills/
-├── .agents/skills/       # 项目级 Skills（跨 Agent 共享）
-├── .claude/              # Claude Code 项目配置
-├── .codex/               # Codex 项目配置
-├── .tiga/                # 用户相关的本地文件入口（git-ignored）
-│   ├── agent-res/          # Agent 生成内容
-│   │   └── markdown/         # Agent 生成的 Markdown 文件
-│   └── Todo.md             # 用户个人计划与待办
-├── 01-prompts/           # 可复用的 Prompt 模板
-├── 02-agent-skills/      # Agent Skills 注册表（扁平存放技能软链接，分组仅体现在下方技能清单文档中）
-├── 03-custom-skills/     # 用户自定义 Skills（源文件）
-├── 04-scripts/           # 实用脚本
-└── descriptions-zh.conf  # README 技能中文说明的权威配置
-```
+## 快速开始
 
-- **.agents/skills/** — 项目级技能，`.claude/skills` 和 `.codex/skills` 均为指向此目录的软链接。
-- **.claude/** 、 **.codex/** — Agent 项目配置目录，`skills` 均指向 `.agents/skills/`。
-- **02-agent-skills/** — 技能注册表，技能条目以软链接形式直接扁平存放在该目录下，来源分组仅体现在 README 技能清单中。外部技能软链接为用户级相对路径（如 `../../../AG-Tools/...`），要求 [AG-Tools](https://github.com/Tiga08/AG-Tools) 位于 `~/Projects/AG-Tools`、本仓库位于 `~/Projects/Tiga/Skills`。
-- **03-custom-skills/** — 存放项目内自定义技能的源文件，通过相对路径软链接注册到 `02-agent-skills/`。
+默认布局下，本仓库位于 `~/Projects/Tiga/Skills`；如需使用已注册的外部技能，还需将 [AG-Tools](https://github.com/Tiga08/AG-Tools) 放在 `~/Projects/AG-Tools`。
 
-## 安装
-
-运行 `setup` 命令创建用户级软链接，使 Claude Code 和 Codex 可以发现技能：
+在仓库根目录配置用户级发现链接，然后检查注册表：
 
 ```bash
 ./04-scripts/manage-skills.sh setup
+./04-scripts/manage-skills.sh check
 ```
-
-执行后将创建：
-- `~/.claude/skills` → `<project>/02-agent-skills/`（整个目录作为软链接）
-- `~/.codex/skills/tiga-skills` → `<project>/02-agent-skills/`（子目录下的软链接）
 
 ## 使用方法
 
-新增技能前，先在项目根目录的 `descriptions-zh.conf` 中配置 README 所需的中文说明：
+新增技能前，先在 `descriptions-zh.conf` 中配置 `<name>.description`；外部技能缺少 `argument-hint` 时，可再提供 `<name>.arguments`。
 
-```ini
-my-skill.description=说明 skill 的核心功能与适用场景。
-my-skill.arguments=<file> [--flag]
-```
+- 注册外部或自定义技能：`add <path> [--name <name>]` / `add-custom <name>`
+- 移除注册项：`remove <name>`
+- 查看、校验或刷新清单：`list` / `check` / `update-readme`
 
-`add` 与 `add-custom` 会在创建链接前校验 `description`；`remove` 会同步删除对应配置。`update-readme` 从该配置生成技能说明。
+以上子命令均由 `./04-scripts/manage-skills.sh` 执行；完整的 Agent 操作命令见 [`AGENTS.md`](AGENTS.md#commands)。
 
-技能清单的「参数」列优先取 `SKILL.md` 的 `argument-hint` 字段，仅当该字段缺失（如不可修改的外部技能）时才回退到 `<name>.arguments`，两者都没有时显示 `—`。
+## 资源目录
 
-```bash
-# 从外部路径添加技能
-./04-scripts/manage-skills.sh add ~/Projects/external-skills/my-skill
+可复用 Prompt：
 
-# 从 03-custom-skills/ 添加技能
-./04-scripts/manage-skills.sh add-custom tiga-govsync
+- [`en-chat-assistant.md`](01-prompts/en-chat-assistant.md) — 把中文聊天内容整理为可直接发送的英文回复。
+- [`en-to-zh-assistant.md`](01-prompts/en-to-zh-assistant.md) — 理解并翻译英文文段、图片、网址、词汇或文件。
+- [`zh-to-en-assistant.md`](01-prompts/zh-to-en-assistant.md) — 将中文词汇或消息转换为简洁、地道的英文。
 
-# 移除技能
-./04-scripts/manage-skills.sh remove my-skill
-
-# 列出已注册技能
-./04-scripts/manage-skills.sh list
-
-# 检查技能软链接与项目级链接的健康状态
-./04-scripts/manage-skills.sh check
-
-# 更新 README 技能清单
-./04-scripts/manage-skills.sh update-readme
-```
-
-## 技能清单
+下方 Agent Skills 清单由 `manage-skills.sh` 根据注册表与 `descriptions-zh.conf` 生成。
 
 <!-- BEGIN SKILL LIST -->
 
@@ -94,6 +57,15 @@ my-skill.arguments=<file> [--flag]
 | tiga-translate | <path...> | 翻译 Markdown 文件或目录前先判断需要翻译的内容与数量，再按文档类型自动放置简体中文译文；可手动调用，也可由 `tiga-govsync` 等其他技能调用。 |
 | tiga-update-skills | — | 依据 Claude Code、Codex 与 Agent Skills 官方规范审查并更新本地 Skill，检查结构、兼容性、元数据、调用策略与规范漂移，并可刷新官方文档快照后自审自身。 |
 
+### baoyu-skills
+
+来源于外部路径，通过 `add` 命令注册
+
+| 名称 | 参数 | 描述 |
+| ---- | ---- | ---- |
+| baoyu-format-markdown | <file> [--quotes\|-q] [--no-quotes] [--spacing\|-s] [--no-spacing] [--emphasis\|-e] [--no-emphasis] | 将纯文本或 Markdown 优化为带 frontmatter、标题、摘要、层级、列表和代码块的 `{filename}-formatted.md`，也可选择保留原结构或仅原地修正排版。 |
+| baoyu-url-to-markdown | <url> [--output <path>] [--format markdown\|json] [--adapter x\|youtube\|hn\|generic] [--headless] [--wait-for none\|interaction\|force] ... | 通过 Chrome 抓取网页并用 X、YouTube、Hacker News 或通用适配器转换为 Markdown/JSON，可按需等待登录或人工交互后再抓取。 |
+
 ### ECC-skills
 
 来源于外部路径，通过 `add` 命令注册
@@ -104,13 +76,10 @@ my-skill.arguments=<file> [--flag]
 | skill-scout | — | 在创建、复刻或扩展 skill 前搜索并审查本地、marketplace、GitHub 和 Web 候选；无固定命令参数，调用时提供目标任务、触发条件、涉及领域与关键词。 |
 | skill-stocktake | [full] | 按统一质量清单审查全局及当前项目的 Claude skills 和 commands，依据缓存自动执行增量 Quick Scan 或完整盘点，当前工作目录决定项目级扫描范围。 |
 
-### baoyu-skills
-
-来源于外部路径，通过 `add` 命令注册
-
-| 名称 | 参数 | 描述 |
-| ---- | ---- | ---- |
-| baoyu-format-markdown | <file> [--quotes\|-q] [--no-quotes] [--spacing\|-s] [--no-spacing] [--emphasis\|-e] [--no-emphasis] | 将纯文本或 Markdown 优化为带 frontmatter、标题、摘要、层级、列表和代码块的 `{filename}-formatted.md`，也可选择保留原结构或仅原地修正排版。 |
-| baoyu-url-to-markdown | <url> [--output <path>] [--format markdown\|json] [--adapter x\|youtube\|hn\|generic] [--headless] [--wait-for none\|interaction\|force] ... | 通过 Chrome 抓取网页并用 X、YouTube、Hacker News 或通用适配器转换为 Markdown/JSON，可按需等待登录或人工交互后再抓取。 |
-
 <!-- END SKILL LIST -->
+
+## 文档
+
+- [`AGENTS.md`](AGENTS.md) / [`AGENTS.zh.md`](AGENTS.zh.md) — 仓库结构、权属、命令与操作边界。
+- [`SKILLS-INDEX.md`](SKILLS-INDEX.md) — AG-Tools 范围内的技能索引。
+- [`SKILLS-REFS.md`](SKILLS-REFS.md) — AG-Tools 技能的下游引用清单。
