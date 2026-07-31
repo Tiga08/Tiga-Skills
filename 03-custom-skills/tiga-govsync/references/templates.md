@@ -6,12 +6,12 @@ Rules for using the file-backed governance-document templates in Phase 2 and for
 
 | Target | Template |
 | --- | --- |
-| `AGENTS.md` | `templates/agents-template.md` |
-| Root `CLAUDE.md` | `templates/claude-root-template.md` |
-| Subdirectory `CLAUDE.md` | `templates/claude-subdir-template.md` |
-| Root `README.md` | `templates/readme-root-template.md` |
-| Nested `README.md` outside `docs/` | `templates/readme-nested-template.md` |
-| `docs/**/README.md` | `templates/docs-index-template.md` |
+| `AGENTS.md` | `assets/agents-template.md` |
+| Root `CLAUDE.md` | `assets/claude-root-template.md` |
+| Subdirectory `CLAUDE.md` | `assets/claude-subdir-template.md` |
+| Root `README.md` | `assets/readme-root-template.md` |
+| Nested `README.md` outside `docs/` | `assets/readme-nested-template.md` |
+| `docs/**/README.md` | `assets/docs-index-template.md` |
 
 Topic documents under `docs/` have no template. Use the catalog templates as generation inputs where generation is allowed and as structural baselines for existing governed documents.
 

@@ -17,7 +17,7 @@ Validate each layer independently. A field that is an official Claude Code exten
 | `metadata` | no | mapping whose keys and values are strings |
 | `allowed-tools` | no | space-separated string; experimental and not portable across every client |
 
-Supporting resources normally live under `references/`, `scripts/`, or `assets/`, but other directories are allowed. Reference them with paths relative to the skill root, such as `references/policy.md` or `templates/report-template.md`.
+Supporting resources normally live under `references/`, `scripts/`, or `assets/`, but other directories are allowed. Reference them with paths relative to the skill root, such as `references/policy.md` or `assets/report-template.md`.
 
 ### Claude Code extensions
 

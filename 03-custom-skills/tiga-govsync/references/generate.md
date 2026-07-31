@@ -20,7 +20,7 @@ When more than one file matches the same row, the narrowest scope owns the fact:
 
 Discover every project-owned `README.md` at any depth and every Markdown file below any `docs/` directory from `git ls-files -co --exclude-standard`. Do not follow symlinked directories or include dependency, vendored, generated, or translation trees.
 
-When the root `README.md` is missing, generate it from `templates/readme-root-template.md`. Never create a missing nested `README.md` (including `docs/**/README.md`) or topic document under `docs/`; their templates are structural baselines only. Existing README/docs files participate in analysis, cross-document reconciliation, section checks, and audit. In `update`, they may be minimally rewritten to enforce the single-source rule; in `check`, changes are previewed only; in `fix`, Phase 4 asks before applying each change.
+When the root `README.md` is missing, generate it from `assets/readme-root-template.md`. Never create a missing nested `README.md` (including `docs/**/README.md`) or topic document under `docs/`; their templates are structural baselines only. Existing README/docs files participate in analysis, cross-document reconciliation, section checks, and audit. In `update`, they may be minimally rewritten to enforce the single-source rule; in `check`, changes are previewed only; in `fix`, Phase 4 asks before applying each change.
 
 ## Step 1: Analyze the repository
 
@@ -48,7 +48,7 @@ In `check`, print the analysis summary and the plan with those annotations, then
 
 Generate the planned files in order: `AGENTS.md` → root `CLAUDE.md` → each subdirectory `CLAUDE.md` → root `README.md` (only when missing).
 
-- Read the rules in `references/templates.md`, then use the corresponding file under `templates/`, including its line budget.
+- Read the rules in `references/templates.md`, then use the corresponding file under `assets/`, including its line budget.
 - Assess each required section in the order defined by `references/templates.md`. Omit sections that fail the assessment and record the reason for Phase 6; never invent content or keep placeholder text.
 - Every rule must derive from the actual repository structure, files, and observable conventions. Do not fabricate rules.
 - Do not write a rule that only restates every applicable global baseline read in Step 1; a rule covered for only one client may still be required by another.

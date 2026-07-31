@@ -43,7 +43,7 @@ Build a fact-to-owner map for all discovered governance documents using the owne
 
 ## Step 5: Section structure
 
-For every governed document with a template — root and nested `README.md`, `docs/**/README.md`, `AGENTS.md`, and root or subdirectory `CLAUDE.md` — read its template under `templates/` and the necessity assessment in `references/templates.md`.
+For every governed document with a template — root and nested `README.md`, `docs/**/README.md`, `AGENTS.md`, and root or subdirectory `CLAUDE.md` — read its template under `assets/` and the necessity assessment in `references/templates.md`.
 
 Report `[SECTION]` for a required section that is missing when its condition holds, an empty or placeholder-only section, a section whose content belongs to another authoritative file, or a repository-specific section that fails the necessity assessment. Name the section, the applicable template rule, and the available repository evidence.
 

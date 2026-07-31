@@ -37,7 +37,7 @@ Flags:
 
 Runs in `update`, and as a read-only preview in `check`. Skipped in `fix`.
 
-Read [generate.md](references/generate.md) and follow it. It covers governance-document discovery, repository analysis, the supported clients' global instruction baselines, the single-source ownership rule, the criterion for subdirectory `CLAUDE.md` files, the generation plan, the merge-on-overwrite rule, cross-document reconciliation, and section-structure governance. Template rules and line budgets live in [templates.md](references/templates.md); the templates themselves live under `templates/`.
+Read [generate.md](references/generate.md) and follow it. It covers governance-document discovery, repository analysis, the supported clients' global instruction baselines, the single-source ownership rule, the criterion for subdirectory `CLAUDE.md` files, the generation plan, the merge-on-overwrite rule, cross-document reconciliation, and section-structure governance. Template rules and line budgets live in [templates.md](references/templates.md); the template assets live under `assets/`.
 
 Existing clean files are merged and rewritten without prompting; pre-existing dirty targets follow the Phase 1 confirmation guard. Merge-on-overwrite preserves old rules that still hold, and reconciliation changes only facts that violate the ownership model. Create a missing root `README.md` from its template; never create a missing nested `README.md` or topic document under `docs/`.
 
