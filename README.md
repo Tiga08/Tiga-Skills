@@ -57,15 +57,6 @@ Tiga-Skills 通过符号链接聚合技能源，并用 Bash 管理入口维护�
 | tiga-translate | <path...> | 翻译 Markdown 文件或目录前先判断需要翻译的内容与数量，再按文档类型自动放置简体中文译文；可手动调用，也可由 `tiga-govsync` 等其他技能调用。 |
 | tiga-update-skills | — | 依据 Claude Code、Codex 与 Agent Skills 官方规范审查并更新本地 Skill，检查结构、兼容性、元数据、调用策略与规范漂移，并可刷新官方文档快照后自审自身。 |
 
-### baoyu-skills
-
-来源于外部路径，通过 `add` 命令注册
-
-| 名称 | 参数 | 描述 |
-| ---- | ---- | ---- |
-| baoyu-format-markdown | <file> [--quotes\|-q] [--no-quotes] [--spacing\|-s] [--no-spacing] [--emphasis\|-e] [--no-emphasis] | 将纯文本或 Markdown 优化为带 frontmatter、标题、摘要、层级、列表和代码块的 `{filename}-formatted.md`，也可选择保留原结构或仅原地修正排版。 |
-| baoyu-url-to-markdown | <url> [--output <path>] [--format markdown\|json] [--adapter x\|youtube\|hn\|generic] [--headless] [--wait-for none\|interaction\|force] ... | 通过 Chrome 抓取网页并用 X、YouTube、Hacker News 或通用适配器转换为 Markdown/JSON，可按需等待登录或人工交互后再抓取。 |
-
 ### ECC-skills
 
 来源于外部路径，通过 `add` 命令注册
@@ -75,6 +66,31 @@ Tiga-Skills 通过符号链接聚合技能源，并用 Bash 管理入口维护�
 | security-scan | scan [<path>]\|init [--min-severity <level>] [--format json\|markdown\|html] [--fix] [--opus] [--stream] | 使用 AgentShield 扫描 `.claude/` 中的 CLAUDE.md、settings.json、MCP、hooks 和 agent 定义，发现安全漏洞、配置错误与注入风险，也可初始化安全配置。 |
 | skill-scout | — | 在创建、复刻或扩展 skill 前搜索并审查本地、marketplace、GitHub 和 Web 候选；无固定命令参数，调用时提供目标任务、触发条件、涉及领域与关键词。 |
 | skill-stocktake | [full] | 按统一质量清单审查全局及当前项目的 Claude skills 和 commands，依据缓存自动执行增量 Quick Scan 或完整盘点，当前工作目录决定项目级扫描范围。 |
+
+### anthropics-skills
+
+来源于外部路径，通过 `add` 命令注册
+
+| 名称 | 参数 | 描述 |
+| ---- | ---- | ---- |
+| pptx | — | 创建、读取、编辑和校验 PowerPoint 的 `.pptx` 与 `.potx` 文件，适用于演示文稿、模板、布局、备注及评论等相关任务。 |
+
+### baoyu-skills
+
+来源于外部路径，通过 `add` 命令注册
+
+| 名称 | 参数 | 描述 |
+| ---- | ---- | ---- |
+| baoyu-format-markdown | <file> [--quotes\|-q] [--no-quotes] [--spacing\|-s] [--no-spacing] [--emphasis\|-e] [--no-emphasis] | 将纯文本或 Markdown 优化为带 frontmatter、标题、摘要、层级、列表和代码块的 `{filename}-formatted.md`，也可选择保留原结构或仅原地修正排版。 |
+| baoyu-url-to-markdown | <url> [--output <path>] [--format markdown\|json] [--adapter x\|youtube\|hn\|generic] [--headless] [--wait-for none\|interaction\|force] ... | 通过 Chrome 抓取网页并用 X、YouTube、Hacker News 或通用适配器转换为 Markdown/JSON，可按需等待登录或人工交互后再抓取。 |
+
+### mattpocock-skills
+
+来源于外部路径，通过 `add` 命令注册
+
+| 名称 | 参数 | 描述 |
+| ---- | ---- | ---- |
+| grill-me | — | 通过持续访谈澄清并压力测试计划或设计，直到关键决策分支达成共同理解。 |
 
 <!-- END SKILL LIST -->
 
