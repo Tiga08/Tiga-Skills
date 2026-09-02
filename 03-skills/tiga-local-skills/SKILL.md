@@ -1,6 +1,6 @@
 ---
 name: tiga-local-skills
-description: Init, add, update, remove, and list project-level skills in the current project's .agents/skills/, shared with Claude Code and Codex via .claude/skills and .codex/skills symlinks, while maintaining AG-Tools downstream references when applicable. Use when setting up or managing skills for one project only; for the Tiga-Skills global registry (02-agent-skills/), use tiga-global-skills.
+description: Init, add, update, remove, and list project-level skills in the current project's .agents/skills/, shared with Claude Code and Codex via .claude/skills and .codex/skills symlinks, while maintaining AG-Tools downstream references when applicable. Use when setting up or managing skills for one project only; for the Tiga-Skills global skill directory (03-skills/), use tiga-global-skills.
 argument-hint: "init|add|update|remove|list [args]"
 arguments: [mode]
 disable-model-invocation: true
@@ -168,7 +168,7 @@ After a successful import, resolve the source to an absolute path. If it is unde
    # 下游引用
 
    > 记录 AG-Tools 技能被下游仓库引用的情况，回答"哪些 skill 被哪些仓库引用"。
-   > **维护契约**：本清单由下游消费方维护——各项目 `.agents/skills/` 条目的增删由 tiga-local-skills 负责，Tiga-Skills `02-agent-skills/` 注册表的增删由其 `manage-skills.sh` 负责。
+   > **维护契约**：本清单由下游消费方维护——各项目 `.agents/skills/` 条目的增删由 tiga-local-skills 负责，Tiga-Skills `03-skills/` 注册表的增删由其 `manage-skills.sh` 负责。
    > 行格式：上游技能为相对 AG-Tools 根目录的路径；引用方为相对 `~/Projects` 的条目路径（含条目名）；方式为 `link` 或 `copy`。表体按"上游技能"列排序。
 
    | 上游技能 | 引用方 | 方式 |

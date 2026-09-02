@@ -47,13 +47,13 @@ Record the paths of the files actually written for the Phase 5 summary and trans
 
 Runs only when `--skills` is set. Without the flag, skip it silently — the rest of the workflow is unchanged.
 
-**Discovery:** find project-owned `SKILL.md` files in standard `.agents/skills/` directories and repository-owned source directories such as `03-custom-skills/`. Use the project-owned inventory from `git ls-files -co --exclude-standard`; do not traverse symlink registries, dependencies, vendored trees, generated output, or ignored paths. `--scope` narrows the set.
+**Discovery:** find project-owned `SKILL.md` files in standard `.agents/skills/` directories and repository-owned source directories such as `03-skills/`. Use the project-owned inventory from `git ls-files -co --exclude-standard`; do not traverse symlink registries, dependencies, vendored trees, generated output, or ignored paths. `--scope` narrows the set.
 
 Read [skill-spec.md](references/skill-spec.md) and follow it. It separates the portable Agent Skills core, Claude Code extensions, and Codex `agents/openai.yaml`, then defines the `[MISSING]` / `[UNKNOWN]` / `[MISMATCH]` / `[STALE]` / `[BLOAT]` checks and fix flow.
 
 In `check` the phase reports only. In `update` apply fixes directly except where the preflight dirty-target guard requires confirmation; in `fix` confirm each fix first. Record the containing directory of every modified `SKILL.md` for Phase 5; never record a bare `SKILL.md` path.
 
-If `./04-scripts/manage-skills.sh` exists, also run `./04-scripts/manage-skills.sh check` and report its registry/link health separately from the specification verdict.
+If `./02-scripts/manage-skills.sh` exists, also run `./02-scripts/manage-skills.sh check` and report its registry/link health separately from the specification verdict.
 
 ### Phase 4: Audit
 

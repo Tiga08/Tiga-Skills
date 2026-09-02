@@ -6,24 +6,24 @@ Tiga-Skills 通过符号链接聚合技能源，并用 Bash 管理入口维护�
 
 ## 快速开始
 
-默认布局下，本仓库位于 `~/Projects/Tiga/Skills`；如需使用已注册的外部技能，还需将 [AG-Tools](https://github.com/Tiga08/AG-Tools) 放在 `~/Projects/AG-Tools`。
+默认布局下，本仓库位于 `~/Projects/AG-Tools/tiga-skills`；如需使用已注册的外部技能，还需将 [AG-Tools](https://github.com/Tiga08/AG-Tools) 放在 `~/Projects/AG-Tools`。
 
 在仓库根目录配置用户级发现链接，然后检查注册表：
 
 ```bash
-./04-scripts/manage-skills.sh setup
-./04-scripts/manage-skills.sh check
+./02-scripts/manage-skills.sh setup
+./02-scripts/manage-skills.sh check
 ```
 
 ## 使用方法
 
 新增技能前，先在 `descriptions-zh.conf` 中配置 `<name>.description`；外部技能缺少 `argument-hint` 时，可再提供 `<name>.arguments`。
 
-- 注册外部或自定义技能：`add <path> [--name <name>]` / `add-custom <name>`
-- 移除注册项：`remove <name>`
+- 注册外部技能：`add <path> [--name <name>]`
+- 移除外部技能符号链接：`remove <name>`
 - 查看、校验或刷新清单：`list` / `check` / `update-readme`
 
-以上子命令均由 `./04-scripts/manage-skills.sh` 执行；完整的 Agent 操作命令见 [`AGENTS.md`](AGENTS.md#commands)。
+以上子命令均由 `./02-scripts/manage-skills.sh` 执行；完整的 Agent 操作命令见 [`AGENTS.md`](AGENTS.md#commands)。
 
 ## 资源目录
 
@@ -43,11 +43,11 @@ Tiga-Skills 通过符号链接聚合技能源，并用 Bash 管理入口维护�
 
 | 名称 | 参数 | 描述 |
 | ---- | ---- | ---- |
-| tiga-global-skills | setup\|add\|add-custom\|remove\|list\|check\|update-readme [args] | 管理 Tiga-Skills 全局技能注册表：配置用户级链接、注册与移除外部或自定义 skill、列出条目、检查链接与 frontmatter 健康状态、刷新 README 技能清单；中文说明来自根目录 descriptions-zh.conf。 |
+| tiga-global-skills | setup\|add\|remove\|list\|check\|update-readme [args] | 管理 Tiga-Skills 全局技能目录：配置用户级链接、注册与移除外部 skill、列出条目、检查目录与 frontmatter 健康状态、刷新 README 技能清单；中文说明来自根目录 descriptions-zh.conf。 |
 
 ### custom-skills
 
-来源于 `03-custom-skills/`，通过 `add-custom` 命令注册
+来源于 `03-skills/` 中的自定义技能目录
 
 | 名称 | 参数 | 描述 |
 | ---- | ---- | ---- |

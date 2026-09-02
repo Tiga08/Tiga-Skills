@@ -70,4 +70,4 @@ Group findings by priority — `[MISSING]` > `[UNKNOWN]` > `[MISMATCH]` > `[STAL
 
 `check` reports only. `update` applies fixes directly except for pre-existing dirty targets protected by Phase 1. `fix` asks through the host's user-confirmation mechanism, offering apply / skip / apply all remaining / skip all remaining.
 
-**Hard constraint:** never modify a skill outside the governed repository. Do not follow registry directories such as `02-agent-skills/`, `.claude/skills`, or `.codex/skills`; report external sources without rewriting them.
+**Hard constraint:** never modify a skill outside the governed repository. Do not follow symlinks in `03-skills/`, `.claude/skills`, or `.codex/skills`; report external sources without rewriting them.

@@ -1,13 +1,13 @@
 ---
 name: tiga-global-skills
-description: Manage the Tiga-Skills global skill registry (02-agent-skills/) and its README metadata via manage-skills.sh and the root descriptions-zh.conf — set up user-level symlinks, add or remove skills, maintain Chinese descriptions, list entries, check link health and frontmatter compliance, and regenerate the README skill table. Use when registering, removing, or documenting globally shared skills in this repository; for a project's own .agents/skills/, use tiga-local-skills.
-argument-hint: "setup|add|add-custom|remove|list|check|update-readme [args]"
+description: Manage the Tiga-Skills global skill directory (03-skills/) and its README metadata via manage-skills.sh and the root descriptions-zh.conf — set up user-level symlinks, add or remove external skills, maintain Chinese descriptions, list entries, check directory health and frontmatter compliance, and regenerate the README skill table. Use when registering, removing, or documenting globally shared skills in this repository; for a project's own .agents/skills/, use tiga-local-skills.
+argument-hint: "setup|add|remove|list|check|update-readme [args]"
 arguments: [operation]
 disable-model-invocation: true
-compatibility: Only works inside the Tiga-Skills repository (drives 04-scripts/manage-skills.sh)
+compatibility: Only works inside the Tiga-Skills repository (drives 02-scripts/manage-skills.sh)
 ---
 
-Manage the skills registered in `02-agent-skills/` via the management script — every operation runs through `./04-scripts/manage-skills.sh <operation> [args]`. Skills are stored flat: each entry is a symlink directly under `02-agent-skills/`, and its source (e.g., `superpowers`, `custom-skills`) is inferred by resolving the symlink target and used only for `list`/README grouping. README descriptions come only from the root `descriptions-zh.conf`.
+Manage the skills in `03-skills/` via the management script — every operation runs through `./02-scripts/manage-skills.sh <operation> [args]`. Custom skills are real directories directly under `03-skills/`; external skills are symlinks. Source category (e.g., `custom-skills`, `baoyu-skills`) is inferred by entry type and symlink target and used only for `list`/README grouping. README descriptions come only from the root `descriptions-zh.conf`.
 
 **Arguments:** One positional operation argument is required.
 
@@ -15,14 +15,13 @@ Manage the skills registered in `02-agent-skills/` via the management script —
 
 - Positional operation (required, one of):
   - `setup` — create user-level symlinks (`~/.claude/skills`, `~/.codex/skills/tiga-skills`).
-  - `add <path> [--name <name>]` — register a skill from an external path.
-  - `add-custom <name>` — register a custom skill from `03-custom-skills/`.
-  - `remove <name>` — remove a skill registration by name.
+  - `add <path> [--name <name>]` — register an external skill as a symlink.
+  - `remove <name>` — remove an external skill symlink (refuses to delete real directories).
   - `list` — list registered skills grouped by source.
-  - `check` — verify health of skill symlinks and project-level links, plus frontmatter compliance for in-repo sources and project-level skills.
+  - `check` — verify health of skill directory and project-level links, plus frontmatter compliance for in-repo sources and project-level skills.
   - `update-readme` — refresh the README skill list.
 
-**No-argument behavior:** If the operation argument is missing or not one of the seven above, do not guess. Use `AskUserQuestion` to let the user choose among the four most common operations — `add` / `remove` / `list` / `check` — noting in the option descriptions that `setup`, `add-custom`, and `update-readme` can be entered via Other. Then collect any missing required arguments (source path for `add`, skill name for `add-custom` / `remove`).
+**No-argument behavior:** If the operation argument is missing or not one of the six above, do not guess. Use `AskUserQuestion` to let the user choose among the four most common operations — `add` / `remove` / `list` / `check` — noting in the option descriptions that `setup` and `update-readme` can be entered via Other. Then collect any missing required arguments (source path for `add`, skill name for `remove`).
 
 ## Workflow
 
@@ -32,7 +31,7 @@ Locate the repository root and confirm the management script exists — this ski
 
 ```bash
 REPO_ROOT=$(git rev-parse --show-toplevel)
-test -x "$REPO_ROOT/04-scripts/manage-skills.sh"
+test -x "$REPO_ROOT/02-scripts/manage-skills.sh"
 ```
 
 If the script is missing, report that this skill is only usable inside the Tiga-Skills repository and stop.
@@ -41,7 +40,7 @@ Take `$operation` as the operation and collect its arguments from `$ARGUMENTS`. 
 
 ### Phase 2: Execute Operation
 
-Before `add`, `add-custom`, or `update-readme`, maintain the README metadata:
+Before `add` or `update-readme`, maintain the README metadata:
 
 1. Read the affected `SKILL.md` and the root `descriptions-zh.conf`.
 2. Prepare `<name>.description` from the skill's current behavior in Simplified Chinese — its core function and applicable context only. Parameters belong in the `argument-hint` frontmatter field (or, for external skills whose source must not be touched, in the `<name>.arguments` fallback field); do not enumerate them in the description.
@@ -52,7 +51,7 @@ Dispatch to the matching section in [operations.md](${CLAUDE_SKILL_DIR}/referenc
 
 **Confirmation policy** (per AGENTS.md "Ask First: registering, removing skills"):
 
-- `add` / `add-custom` / `remove` — always confirm via `AskUserQuestion` before executing, showing what will happen.
+- `add` / `remove` — always confirm via `AskUserQuestion` before executing, showing what will happen.
 - `setup` — confirm only when the pre-check finds a conflicting link; if both user-level links are already correct or absent, execute directly.
 - `list` / `check` / `update-readme` — read-only or idempotent; execute directly without confirmation.
 

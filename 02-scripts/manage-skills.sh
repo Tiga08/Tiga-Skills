@@ -1,13 +1,12 @@
 #!/usr/bin/env bash
-# 技能管理脚本 — 管理 02-agent-skills/ 中的软链接并更新 README.md
-# 02-agent-skills/ 为扁平结构：技能软链接直接位于该目录下，来源分类通过解析符号链接目标推断，仅用于展示分组
+# 技能管理脚本 — 管理 03-skills/ 中的技能注册并更新 README.md
+# 03-skills/ 为统一技能目录：自定义技能为真实目录，外部技能为符号链接；来源分类通过条目类型和链接目标推断，仅用于展示分组
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-SKILLS_DIR="$PROJECT_ROOT/02-agent-skills"
-CUSTOM_DIR="$PROJECT_ROOT/03-custom-skills"
+SKILLS_DIR="$PROJECT_ROOT/03-skills"
 README="$PROJECT_ROOT/README.md"
 DESCRIPTIONS_ZH_CONF="$PROJECT_ROOT/descriptions-zh.conf"
 AGTOOLS_ROOT="$HOME/Projects/AG-Tools"
@@ -75,7 +74,7 @@ sync_agtools_refs() {
 # 下游引用
 
 > 记录 AG-Tools 技能被下游仓库引用的情况，回答"哪些 skill 被哪些仓库引用"。
-> **维护契约**：本清单由下游消费方维护——各项目 `.agents/skills/` 条目的增删由 tiga-local-skills 负责，Tiga-Skills `02-agent-skills/` 注册表的增删由其 `manage-skills.sh` 负责。
+> **维护契约**：本清单由下游消费方维护——各项目 `.agents/skills/` 条目的增删由 tiga-local-skills 负责，Tiga-Skills `03-skills/` 注册表的增删由其 `manage-skills.sh` 负责。
 > 行格式：上游技能为相对 AG-Tools 根目录的路径；引用方为相对 `~/Projects` 的条目路径（含条目名，覆盖 `--name` 重命名）；方式为 `link` 或 `copy`。表体按"上游技能"列排序。
 
 | 上游技能 | 引用方 | 方式 |
@@ -267,7 +266,7 @@ category_description() {
   local category="$1"
   case "$category" in
     superpowers)    echo "来源于 [AG-Tools/superpowers](https://github.com/Tiga08/AG-Tools)" ;;
-    custom-skills)  echo '来源于 `03-custom-skills/`，通过 `add-custom` 命令注册' ;;
+    custom-skills)  echo '来源于 `03-skills/` 中的自定义技能目录' ;;
     *)              echo '来源于外部路径，通过 `add` 命令注册' ;;
   esac
 }
@@ -277,40 +276,53 @@ skill_categories() {
   cut -f1 "$1" | sort -u | awk '$0 != "custom-skills" && $0 != "superpowers"'
 }
 
-# 判断技能来源类别（用于展示分组，不再对应物理子目录）
+# 判断技能来源类别（用于展示分组）
+# 符号链接按目标路径分类，真实目录一律归为 custom-skills
 classify_source() {
-  local target="$1"
+  local entry="$1"
+  if [ ! -L "$entry" ]; then
+    echo "custom-skills"
+    return
+  fi
+  local target
+  target="$(readlink "$entry")"
   if [[ "$target" =~ /AG-Tools/([^/]+)/ ]]; then
     echo "${BASH_REMATCH[1]}"
-  elif [[ "$target" == *"03-custom-skills/"* ]]; then
-    echo "custom-skills"
   else
     echo "external"
   fi
 }
 
-# 遍历 $SKILLS_DIR 下所有一级符号链接，输出 "分类\t名称\t参数\t描述" 到指定文件
+# 遍历 $SKILLS_DIR 下所有一级条目（真实目录或符号链接），输出 "分类\t名称\t参数\t描述" 到指定文件
 collect_skill_rows() {
   local outfile="$1"
   : > "$outfile"
 
-  local link
-  for link in "$SKILLS_DIR"/*; do
-    [ -L "$link" ] || continue
-    local name target category resolved desc args
-    name="$(basename "$link")"
-    target="$(readlink "$link")"
-    category="$(classify_source "$target")"
+  local entry
+  for entry in "$SKILLS_DIR"/*; do
+    [ -L "$entry" ] || [ -d "$entry" ] || continue
+    local name category skill_root desc args
+    name="$(basename "$entry")"
+    category="$(classify_source "$entry")"
 
-    resolved="$(resolve_directory "$SKILLS_DIR" "$target")" || resolved=""
-    if [ -z "$resolved" ]; then
-      echo "⚠ 软链接目标无法解析: $name -> $target" >&2
-    elif [ ! -f "$resolved/SKILL.md" ]; then
-      echo "⚠ 缺少 SKILL.md: $name -> $target" >&2
+    if [ -L "$entry" ]; then
+      local target
+      target="$(readlink "$entry")"
+      skill_root="$(resolve_directory "$SKILLS_DIR" "$target")" || skill_root=""
+      if [ -z "$skill_root" ]; then
+        echo "⚠ 软链接目标无法解析: $name -> $target" >&2
+      elif [ ! -f "$skill_root/SKILL.md" ]; then
+        echo "⚠ 缺少 SKILL.md: $name -> $target" >&2
+      fi
+    else
+      skill_root="$entry"
+      if [ ! -f "$skill_root/SKILL.md" ]; then
+        echo "⚠ 缺少 SKILL.md: $name" >&2
+      fi
     fi
 
     desc="$(readme_description "$name")"
-    args="$(skill_arguments "$name" "${resolved:+$resolved/SKILL.md}")"
+    args="$(skill_arguments "$name" "${skill_root:+$skill_root/SKILL.md}")"
     printf '%s\t%s\t%s\t%s\n' "$category" "$name" "$args" "$desc" >> "$outfile"
   done
 }
@@ -396,7 +408,7 @@ cmd_add() {
   validate_skill_name "$name"
 
   local link="$SKILLS_DIR/$name"
-  [[ -e "$link" || -L "$link" ]] && die "技能 '$name' 已存在于 02-agent-skills/"
+  [[ -e "$link" || -L "$link" ]] && die "技能 '$name' 已存在于 03-skills/"
   readme_description "$name" > /dev/null
 
   local category
@@ -411,26 +423,8 @@ cmd_add() {
 
   # 来源位于 AG-Tools 时，同步登记下游引用
   if [[ "$source_path" == "$AGTOOLS_ROOT/"* ]]; then
-    sync_agtools_refs add "${source_path#"$AGTOOLS_ROOT"/}" "${PROJECT_ROOT#"$HOME/Projects/"}/02-agent-skills/$name"
+    sync_agtools_refs add "${source_path#"$AGTOOLS_ROOT"/}" "${PROJECT_ROOT#"$HOME/Projects/"}/03-skills/$name"
   fi
-  cmd_update_readme
-}
-
-# ── add-custom ──
-
-cmd_add_custom() {
-  [ "$#" -eq 1 ] || die "用法: $0 add-custom <name>"
-  local name="$1"
-  validate_skill_name "$name"
-  [ -d "$CUSTOM_DIR/$name" ] || die "自定义技能不存在: 03-custom-skills/$name"
-  [ -f "$CUSTOM_DIR/$name/SKILL.md" ] || die "未找到 SKILL.md: 03-custom-skills/$name/SKILL.md"
-
-  local link="$SKILLS_DIR/$name"
-  [[ -e "$link" || -L "$link" ]] && die "技能 '$name' 已存在于 02-agent-skills/"
-  readme_description "$name" > /dev/null
-
-  ln -s "../03-custom-skills/$name" "$link"
-  echo "✓ 已添加 ${name} -> ../03-custom-skills/${name}（分类: custom-skills）"
   cmd_update_readme
 }
 
@@ -441,6 +435,10 @@ cmd_remove() {
   local name="$1" link
   validate_skill_name "$name"
   link="$SKILLS_DIR/$name"
+
+  if [ -d "$link" ] && [ ! -L "$link" ]; then
+    die "'$name' 是自定义技能（真实目录），不支持通过脚本删除；请手动处理"
+  fi
   [ -L "$link" ] || die "未找到技能 '$name'"
 
   # 删除前先解析链接目标，用于判断是否需同步清理下游引用
@@ -453,7 +451,7 @@ cmd_remove() {
   echo "✓ 已移除 $name"
 
   if [ -n "$resolved" ] && [[ "$resolved" == "$AGTOOLS_ROOT/"* ]]; then
-    sync_agtools_refs remove "${resolved#"$AGTOOLS_ROOT"/}" "${PROJECT_ROOT#"$HOME/Projects/"}/02-agent-skills/$name"
+    sync_agtools_refs remove "${resolved#"$AGTOOLS_ROOT"/}" "${PROJECT_ROOT#"$HOME/Projects/"}/03-skills/$name"
   elif [ -z "$resolved" ] && [[ "$target" == *AG-Tools* ]]; then
     echo "⚠ 链接目标无法解析: $target，SKILLS-REFS.md 下游引用清单中的对应行可能需手动清理" >&2
   fi
@@ -511,28 +509,44 @@ cmd_check() {
   require_no_args "$@"
   local ok=0 bad=0
 
-  echo "检查 02-agent-skills/ 技能软链接:"
-  local link
-  for link in "$SKILLS_DIR"/*; do
-    [ -L "$link" ] || continue
-    local name target resolved
-    name="$(basename "$link")"
-    target="$(readlink "$link")"
-    resolved="$(resolve_directory "$SKILLS_DIR" "$target")" || resolved=""
+  echo "检查 03-skills/ 技能目录:"
+  local entry
+  for entry in "$SKILLS_DIR"/*; do
+    [ -L "$entry" ] || [ -d "$entry" ] || continue
+    local name skill_root
+    name="$(basename "$entry")"
 
-    if [ -z "$resolved" ]; then
-      echo "  ✗ ${name} -> ${target}（目标无法解析）"
-      bad=$((bad + 1))
-    elif [ ! -f "$resolved/SKILL.md" ]; then
-      echo "  ✗ ${name} -> ${target}（缺少 SKILL.md）"
-      bad=$((bad + 1))
-    elif [[ "$resolved" != "$PROJECT_ROOT/"* ]]; then
-      # 外部上游源不可修改，跳过 frontmatter 校验
-      echo "  ✓ ${name} -> ${target}（外部源，跳过 frontmatter 校验）"
-      ok=$((ok + 1))
+    if [ -L "$entry" ]; then
+      local target
+      target="$(readlink "$entry")"
+      skill_root="$(resolve_directory "$SKILLS_DIR" "$target")" || skill_root=""
+
+      if [ -z "$skill_root" ]; then
+        echo "  ✗ ${name} -> ${target}（目标无法解析）"
+        bad=$((bad + 1))
+        continue
+      elif [ ! -f "$skill_root/SKILL.md" ]; then
+        echo "  ✗ ${name} -> ${target}（缺少 SKILL.md）"
+        bad=$((bad + 1))
+        continue
+      elif [[ "$skill_root" != "$PROJECT_ROOT/"* ]]; then
+        echo "  ✓ ${name} -> ${target}（外部源，跳过 frontmatter 校验）"
+        ok=$((ok + 1))
+        continue
+      fi
+      if check_skill_frontmatter "$skill_root/SKILL.md" "$name" "${name} -> ${target}"; then
+        ok=$((ok + 1))
+      else
+        bad=$((bad + 1))
+      fi
     else
-      # 仓库内的源追加官方规范 frontmatter 校验
-      if check_skill_frontmatter "$resolved/SKILL.md" "$name" "${name} -> ${target}"; then
+      skill_root="$entry"
+      if [ ! -f "$skill_root/SKILL.md" ]; then
+        echo "  ✗ ${name}（缺少 SKILL.md）"
+        bad=$((bad + 1))
+        continue
+      fi
+      if check_skill_frontmatter "$skill_root/SKILL.md" "$name" "$name"; then
         ok=$((ok + 1))
       else
         bad=$((bad + 1))
@@ -717,11 +731,10 @@ print_usage() {
 
 命令:
   setup                          创建用户级软链接 (~/.claude/skills → 目录链接, ~/.codex/skills/tiga-skills → 子链接)
-  add <path> [--name <name>]     从外部路径添加技能到 02-agent-skills/
-  add-custom <name>              从 03-custom-skills/ 添加技能到 02-agent-skills/
-  remove <name>                  按名称移除技能软链接
+  add <path> [--name <name>]     从外部路径添加技能符号链接到 03-skills/
+  remove <name>                  按名称移除技能符号链接（仅限外部技能）
   list                           按来源分组列出已注册技能
-  check                          检查技能软链接与项目级链接的健康状态
+  check                          检查技能目录与项目级链接的健康状态
   update-readme                  更新 README.md 技能清单（按来源分组）
 EOF
 }
@@ -734,7 +747,6 @@ shift || true
 case "$cmd" in
   setup)        cmd_setup "$@" ;;
   add)          cmd_add "$@" ;;
-  add-custom)   cmd_add_custom "$@" ;;
   remove)       cmd_remove "$@" ;;
   list)         cmd_list "$@" ;;
   check)        cmd_check "$@" ;;
