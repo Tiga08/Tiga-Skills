@@ -276,6 +276,10 @@ skill_categories() {
   cut -f1 "$1" | sort -u | awk '$0 != "custom-skills" && $0 != "superpowers"'
 }
 
+# Claude Code 会把 claude.ai 同步的官方技能写入 03-skills/synced/（因 ~/.claude/skills 指向本目录）
+# 该目录由 Claude Code 自行维护，不属于本仓库的技能注册表，遍历时跳过
+is_synced_entry() { [ "$(basename "$1")" = "synced" ]; }
+
 # 判断技能来源类别（用于展示分组）
 # 符号链接按目标路径分类，真实目录一律归为 custom-skills
 classify_source() {
@@ -301,6 +305,7 @@ collect_skill_rows() {
   local entry
   for entry in "$SKILLS_DIR"/*; do
     [ -L "$entry" ] || [ -d "$entry" ] || continue
+    is_synced_entry "$entry" && continue
     local name category skill_root desc args
     name="$(basename "$entry")"
     category="$(classify_source "$entry")"
@@ -513,6 +518,7 @@ cmd_check() {
   local entry
   for entry in "$SKILLS_DIR"/*; do
     [ -L "$entry" ] || [ -d "$entry" ] || continue
+    is_synced_entry "$entry" && continue
     local name skill_root
     name="$(basename "$entry")"
 

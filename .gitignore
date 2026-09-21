@@ -15,3 +15,6 @@ __pycache__/
 # Exported documents
 *.docx
 *.pdf
+
+# Claude Code 从 claude.ai 同步的官方技能（~/.claude/skills 指向 03-skills/）
+/03-skills/synced/
