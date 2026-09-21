@@ -2,3 +2,6 @@ interface:
   display_name: "Tiga-翻译 MD 文件"
   short_description: "翻译 Markdown 文件或目录并自动路由简体中文译文"
   default_prompt: "使用 $tiga-translate 翻译指定 Markdown 文件或目录，并在翻译前汇报所需数量。"
+
+policy:
+  allow_implicit_invocation: false

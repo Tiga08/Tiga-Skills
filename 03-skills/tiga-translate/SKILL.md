@@ -1,7 +1,8 @@
 ---
 name: tiga-translate
-description: "Translate Markdown files or directories into Simplified Chinese after assessing what needs translation and route outputs by document type; use manually or invoke from other skills such as tiga-govsync."
+description: "Translate Markdown files or directories into Simplified Chinese after assessing what needs translation and route outputs by document type. Invoke explicitly only."
 argument-hint: "<path...>"
+disable-model-invocation: true
 ---
 
 Translate English Markdown files or directories into Simplified Chinese.
@@ -9,8 +10,6 @@ Translate English Markdown files or directories into Simplified Chinese.
 **Arguments:** One or more paths. Preserve shell-style quoting so a path containing spaces remains one argument. Each path may be a directory or a single `.md` file, mixed freely. 本次调用参数：`$ARGUMENTS`
 
 **No-argument behavior:** If no path is provided, tell the user that at least one file or directory path is required, then stop. Do not scan the project for files and do not ask any questions.
-
-**Invocation constraint:** unlike the other `tiga-*` skills, this one deliberately does **not** set `disable-model-invocation` — `tiga-govsync` Phase 3 invokes it through the Skill tool, which that flag would block, and a direct slash/manual call must keep working too. Keep it model-invocable.
 
 ## Workflow
 
