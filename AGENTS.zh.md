@@ -21,11 +21,11 @@ Tiga-Skills 注册外部和自定义 Agent Skills，并将它们暴露给 Claude
 ./02-scripts/manage-skills.sh add <path> [--name <name>] # 注册外部技能
 ./02-scripts/manage-skills.sh remove <name>              # 移除外部技能符号链接
 ./02-scripts/manage-skills.sh list
-./02-scripts/manage-skills.sh check                      # 检查技能目录与 frontmatter 健康状态
+./02-scripts/manage-skills.sh check                      # 检查技能目录、链接与 frontmatter 健康状态
 ./02-scripts/manage-skills.sh update-readme              # 重新生成 README 技能列表
 ```
 
-对于 `$HOME` 下的路径，`add` 会写入用户可移植的相对符号链接（如 `../../../AG-Tools/...`）；所需的 checkout 布局见根目录 `README.md`。
+对于 `$HOME` 下的路径，`add` 会写入用户可移植的相对符号链接（如 AG-Tools 内的来源写为 `../../superpowers/skills/<name>`）；所需的 checkout 布局见根目录 `README.md`。
 
 ## 边界
 

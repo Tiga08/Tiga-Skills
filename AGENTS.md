@@ -21,11 +21,11 @@ The table lists only paths whose purpose or authority is not self-evident; the r
 ./02-scripts/manage-skills.sh add <path> [--name <name>] # register an external skill
 ./02-scripts/manage-skills.sh remove <name>              # remove an external skill symlink
 ./02-scripts/manage-skills.sh list
-./02-scripts/manage-skills.sh check                      # skill directory and frontmatter health
+./02-scripts/manage-skills.sh check                      # skill directory, link, and frontmatter health
 ./02-scripts/manage-skills.sh update-readme              # regenerate the README skill table
 ```
 
-For a path under `$HOME`, `add` writes a user-portable relative symlink (e.g. `../../../AG-Tools/...`); the required checkout layout is documented in the root `README.md`.
+For a path under `$HOME`, `add` writes a user-portable relative symlink (e.g. `../../superpowers/skills/<name>` for a source inside AG-Tools); the required checkout layout is documented in the root `README.md`.
 
 ## Boundaries
 

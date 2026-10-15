@@ -4,15 +4,12 @@ Per-operation rules for Phase 2 of tiga-global-skills. Dispatch to the section m
 
 ## setup
 
-The script prompts interactively with `read` when a link conflicts, which fails (EOF, non-zero exit under `set -euo pipefail`) when run through the non-interactive Bash tool. So pre-check both user-level links with read-only commands first:
+Setup wires two user-level locations differently:
 
-- `~/.claude/skills` — should be a symlink to `<REPO_ROOT>/03-skills`.
-- `~/.codex/skills/tiga-skills` — should be a symlink to the same target.
+- `~/.claude/skills` — stays a real directory, because Claude Code writes its own content there (`synced/` for skills synced from claude.ai) and only discovers skills one level deep. Setup links each `03-skills/<name>` as `~/.claude/skills/<name>` (absolute target), fixes dangling same-name links, and prunes links that point into `03-skills/` at entries that no longer exist. A same-name real directory or a link to another valid target is reported as a conflict and left untouched. If `~/.claude/skills` itself is a symlink (such as the legacy whole-directory link to `03-skills/`), setup skips it with a warning.
+- `~/.codex/skills/tiga-skills` — a single symlink to `<REPO_ROOT>/03-skills` (Codex scans recursively). If it already exists and points elsewhere, setup skips it with a warning.
 
-Each path is in one of four states: absent / correct symlink / symlink to another target / real directory (or other file).
-
-- All correct or absent → run `./02-scripts/manage-skills.sh setup` directly.
-- Any conflict → ask per conflicting path via `AskUserQuestion` (update the link / keep and skip), then run setup piping the answers in prompt order (claude first, then codex; only conflicting paths produce a prompt), e.g. `printf 'y\n' | ./02-scripts/manage-skills.sh setup`.
+Setup never prompts or overwrites, so run `./02-scripts/manage-skills.sh setup` directly. Report any `冲突` / `跳过` warnings; the user decides whether to remove the conflicting path and rerun setup.
 
 ## add
 
@@ -30,8 +27,9 @@ Execute directly. Before `update-readme`, compare the affected skill's current c
 
 ## Notes
 
-- `add` converts paths under `$HOME` to user-portable relative symlinks (e.g., `../../../AG-Tools/superpowers/skills/<name>`). This assumes the layout `~/Projects/AG-Tools/tiga-skills` (this repo) and `~/Projects/AG-Tools`; paths outside `$HOME` stay absolute with a portability warning.
-- For entries sourced from AG-Tools, `add` / `remove` also maintain the downstream-reference list `~/Projects/AG-Tools/SKILLS-REFS.md` automatically, skipping with a warning when AG-Tools is absent; `add` recreates a missing `SKILLS-REFS.md` from its template, while `remove` only warns.
-- `check` verifies every entry under `03-skills/` — symlinks must resolve and have `SKILL.md`; real directories must have `SKILL.md` — plus the project-level links `.claude/skills` / `.codex/skills` → `.agents/skills` and the root `SKILLS-REFS.md` symlink (must resolve to the AG-Tools downstream-reference file). For in-repo sources (custom skills and `.agents/skills/` project-level skills) it also validates frontmatter compliance (name format and consistency with the registered name, description non-empty and ≤1024 characters, no unknown frontmatter keys); external sources skip frontmatter validation. Any failure makes it exit non-zero.
+- `add` converts paths under `$HOME` to user-portable relative symlinks (e.g., `../../superpowers/skills/<name>` for a source inside AG-Tools; README grouping resolves the link, so the shorter form still groups under `superpowers`). This assumes the layout `~/Projects/AG-Tools/tiga-skills` (this repo) and `~/Projects/AG-Tools`; paths outside `$HOME` stay absolute with a portability warning.
+- For entries sourced from AG-Tools, `add` / `remove` also maintain the downstream-reference list `~/Projects/AG-Tools/SKILLS-REFS.md` automatically, skipping with a warning when `SKILLS-REFS.md` is missing. `remove` deletes the row by the consumer column, so it works even when the link target no longer exists.
+- `add` / `remove` resync `~/.claude/skills` links automatically (skipped with a warning while the legacy whole-directory symlink is still in place). After creating a custom skill directory under `03-skills/` by hand, run `setup` to link it.
+- `check` verifies every entry under `03-skills/` — symlinks must resolve and have `SKILL.md`; real directories must have `SKILL.md` — plus the project-level links `.claude/skills` / `.codex/skills` → `.agents/skills`, the root `SKILLS-REFS.md` symlink (must resolve to the AG-Tools downstream-reference file), and the user-level links: `~/.claude/skills` must be a real directory with `<name>` → `03-skills/<name>` for every entry and no dangling links into `03-skills/`, and `~/.codex/skills/tiga-skills` must resolve to `03-skills/`. For in-repo sources (custom skills and `.agents/skills/` project-level skills) it also validates frontmatter compliance (name format and consistency with the registered name, description non-empty and ≤1024 characters, no unknown frontmatter keys); external sources skip frontmatter validation. Any failure makes it exit non-zero.
 - `update-readme` generates grouped three-column tables (`名称` / `参数` / `描述`) from `SKILL.md` `argument-hint` values and `descriptions-zh.conf`, including project-level skills from `.agents/skills/`.
 - If listing available external skills from AG-Tools, scan `~/Projects/AG-Tools/superpowers/skills/`.

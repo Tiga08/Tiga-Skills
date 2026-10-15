@@ -14,11 +14,11 @@ Manage the skills in `03-skills/` via the management script — every operation 
 本次调用：`$ARGUMENTS` — 操作 `$operation`
 
 - Positional operation (required, one of):
-  - `setup` — create user-level symlinks (`~/.claude/skills`, `~/.codex/skills/tiga-skills`).
+  - `setup` — set up user-level links (per-skill links in `~/.claude/skills/`, directory link `~/.codex/skills/tiga-skills`).
   - `add <path> [--name <name>]` — register an external skill as a symlink.
   - `remove <name>` — remove an external skill symlink (refuses to delete real directories).
   - `list` — list registered skills grouped by source.
-  - `check` — verify health of skill directory and project-level links, plus frontmatter compliance for in-repo sources and project-level skills.
+  - `check` — verify health of skill directory, project-level and user-level links, plus frontmatter compliance for in-repo sources and project-level skills.
   - `update-readme` — refresh the README skill list.
 
 **No-argument behavior:** If the operation argument is missing or not one of the six above, do not guess. Use `AskUserQuestion` to let the user choose among the four most common operations — `add` / `remove` / `list` / `check` — noting in the option descriptions that `setup` and `update-readme` can be entered via Other. Then collect any missing required arguments (source path for `add`, skill name for `remove`).
@@ -52,8 +52,7 @@ Dispatch to the matching section in [operations.md](${CLAUDE_SKILL_DIR}/referenc
 **Confirmation policy** (per AGENTS.md "Ask First: registering, removing skills"):
 
 - `add` / `remove` — always confirm via `AskUserQuestion` before executing, showing what will happen.
-- `setup` — confirm only when the pre-check finds a conflicting link; if both user-level links are already correct or absent, execute directly.
-- `list` / `check` / `update-readme` — read-only or idempotent; execute directly without confirmation.
+- `setup` / `list` / `check` / `update-readme` — idempotent and never overwrite existing paths; execute directly without confirmation.
 
 ### Phase 3: Report
 

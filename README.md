@@ -9,12 +9,14 @@
 在仓库根目录执行如下指令：
 
 ```bash
-# 设置 ~/.claude/skills 和 ~/.codex/skills/tiga-skills 软链接
+# 在 ~/.claude/skills/ 下为每个技能建立软链接，并设置 ~/.codex/skills/tiga-skills 软链接
 ./02-scripts/manage-skills.sh setup
 
-# 检查 03-skills/ 中的 skill 是否存在、软链接是否有效，以及项目级链接是否正常
+# 检查 03-skills/ 中的 skill 是否存在、软链接是否有效，以及项目级与用户级链接是否正常
 ./02-scripts/manage-skills.sh check
 ```
+
+`~/.claude/skills` 保持为真实目录：Claude Code 会在其中写入从 claude.ai 同步的 `synced/`，且只扫描这一层，所以按技能逐个链接到 `03-skills/<name>`；Codex 会递归扫描，直接整目录链接即可。`add` / `remove` 会自动同步 `~/.claude/skills`；在 `03-skills/` 手动新建自定义技能后，运行一次 `setup`。
 
 ## Skill 清单
 
