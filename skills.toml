@@ -27,16 +27,17 @@ zh = "构建并打磨项目的领域模型，维护 GLOSSARY.md 与 ADR；grill-
 targets = ["user"]
 upstream = { repo = "https://github.com/mattpocock/skills.git", path = "skills/engineering/domain-modeling" }
 
+[skills.writing-for-agents]
+zh = "编写供 Agent 读取的文档（skill、AGENTS.md、CLAUDE.md）的参考：上下文指针、信息层级、完成标准与精简。"
+targets = ["user"]
+upstream = { repo = "https://github.com/mattpocock/skills.git", path = "skills/productivity/writing-for-agents" }
+
 # 候选上游仓库：只用于按需发现新 skill，不克隆、不同步。
 [watch]
 repos = [
-  "https://github.com/addyosmani/agent-skills",
   "https://github.com/affaan-m/ECC",
   "https://github.com/anthropics/skills",
   "https://github.com/DietrichGebert/ponytail",
-  "https://github.com/garrytan/gstack",
   "https://github.com/Imbad0202/academic-research-skills",
   "https://github.com/mattpocock/skills",
-  "https://github.com/OthmanAdi/planning-with-files",
-  "https://github.com/thedotmack/claude-mem",
 ]

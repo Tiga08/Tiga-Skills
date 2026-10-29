@@ -26,6 +26,7 @@ python3 skills/tiga-skills/scripts/skills.py check     # 检查
 | grill-with-docs | `mattpocock/skills` @ `59db609` | 用户级 | 以追问方式打磨计划或设计，同时沉淀 ADR 与术语表；依赖 grilling 与 domain-modeling。 |
 | grilling | `mattpocock/skills` @ `59db609` | 用户级 | 以设计树方式分轮追问计划、决策或想法，直到达成共同理解；grill-with-docs 的依赖。 |
 | tiga-skills | 自写 | 用户级 | 管理本仓库：按清单安装用户级与项目级 skill，增删 skill，审查并采纳外部 skill 的上游更新，从关注列表发现新 skill。 |
+| writing-for-agents | `mattpocock/skills` @ `59db609` | 用户级 | 编写供 Agent 读取的文档（skill、AGENTS.md、CLAUDE.md）的参考：上下文指针、信息层级、完成标准与精简。 |
 <!-- END SKILL LIST -->
 
 ## 安装位置
