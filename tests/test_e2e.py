@@ -16,6 +16,7 @@
 10. 预览更新时修改了文件；采纳更新后锁定 commit 未前进
 11. 本地改过的外部 skill 被上游版本直接覆盖
 12. 一次采纳多个 skill 时中途失败，已替换的副本与锁定 commit 错位
+13. requires 中的 skill 未登记或没有覆盖依赖方的安装位置时，check 没有报出
 """
 
 import json
@@ -231,6 +232,46 @@ class SkillsE2E(unittest.TestCase):
         output = self.cli("check", ok=False)
         for expected in ("缺失", "wrong-name", "orphan", "README", "../../docs/x.md"):
             self.assertIn(expected, output)
+
+    def test_check_reports_unmet_requires(self):
+        write_skill(self.repo / "skills" / "dep", "dep")
+        self.manifest(f"""\
+            [skills.tiga-skills]
+            zh = "管理"
+            targets = ["user"]
+
+            [skills.alpha]
+            zh = "阿尔法"
+            targets = ["user"]
+            requires = ["dep", "missing"]
+
+            [skills.dep]
+            zh = "依赖"
+            targets = ["project:{self.home / 'Projects' / 'other'}"]
+            """)
+        self.cli("install")
+        output = self.cli("check", ok=False)
+        self.assertIn("alpha 依赖的 missing 不在", output)
+        self.assertIn("alpha 依赖的 dep 没有装到 user", output)
+
+    def test_check_accepts_requires_covered_by_user_or_same_project(self):
+        write_skill(self.repo / "skills" / "dep", "dep")
+        self.manifest(f"""\
+            [skills.tiga-skills]
+            zh = "管理"
+            targets = ["user"]
+
+            [skills.alpha]
+            zh = "阿尔法"
+            targets = ["project:~/Projects/demo"]
+            requires = ["dep", "tiga-skills"]
+
+            [skills.dep]
+            zh = "依赖"
+            targets = ["project:{self.project}"]
+            """)
+        self.cli("install")
+        self.assertIn("全部正常", self.cli("check"))
 
     # ---------- update ----------
 

@@ -214,6 +214,23 @@ def check_skill(name, spec, lock):
     return problems
 
 
+def check_requires(name, spec, manifest):
+    """被依赖的 skill 必须已登记，并覆盖依赖方的每个安装位置；用户级覆盖所有位置。"""
+    problems = []
+    for dep in spec.get("requires", []):
+        if dep not in manifest:
+            problems.append(f"{name} 依赖的 {dep} 不在 skills.toml 中")
+            continue
+        provided = manifest[dep].get("targets", [])
+        if "user" in provided:
+            continue
+        projects = {project_root(t) for t in provided if t.startswith("project:")}
+        for target in spec.get("targets", []):
+            if target == "user" or project_root(target) not in projects:
+                problems.append(f"{name} 依赖的 {dep} 没有装到 {target}")
+    return problems
+
+
 def check(_args):
     manifest = load_manifest()
     lock = load_json(LOCK, {})
@@ -223,6 +240,8 @@ def check(_args):
     problems += [f"skills.toml 中的 {n} 没有对应目录" for n in sorted(manifest.keys() - dirs)]
     for name in sorted(manifest.keys() & dirs):
         problems += check_skill(name, manifest[name], lock)
+    for name in sorted(manifest):
+        problems += check_requires(name, manifest[name], manifest)
     external = {n for n, s in manifest.items() if "upstream" in s}
     problems += [f"skills.lock.json 中的 {n} 不是外部 skill" for n in sorted(lock.keys() - external)]
     desired = desired_links(manifest)

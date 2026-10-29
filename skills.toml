@@ -5,6 +5,7 @@
 #   targets   "user" 链接到 ~/.claude/skills 与 ~/.agents/skills；
 #             "project:<路径>" 链接到该项目的 .agents/skills（路径可用 ~）
 #   upstream  外部 skill 的来源仓库与目录；锁定的 commit 记录在 skills.lock.json
+#   requires  运行时调用的其他 skill；check 校验它们已登记，且装在用户级或相同项目
 
 [skills.tiga-skills]
 zh = "管理本仓库：按清单安装用户级与项目级 skill，增删 skill，审查并采纳外部 skill 的上游更新，从关注列表发现新 skill。"
@@ -14,6 +15,7 @@ targets = ["user"]
 zh = "以追问方式打磨计划或设计，同时沉淀 ADR 与术语表；依赖 grilling 与 domain-modeling。"
 targets = ["user"]
 upstream = { repo = "https://github.com/mattpocock/skills.git", path = "skills/engineering/grill-with-docs" }
+requires = ["grilling", "domain-modeling"]
 
 [skills.grilling]
 zh = "以设计树方式分轮追问计划、决策或想法，直到达成共同理解；grill-with-docs 的依赖。"

@@ -27,12 +27,12 @@ python3 skills/tiga-skills/scripts/skills.py update [name...] --apply
 ## 新增自写 skill
 
 1. 在 `skills/<name>/` 写 `SKILL.md`，`name` 与目录名一致。
-2. 在 `skills.toml` 添加 `[skills.<name>]`，填写 `zh` 与 `targets`。
+2. 在 `skills.toml` 添加 `[skills.<name>]`，填写 `zh` 与 `targets`；它调用其他 skill 时，把它们写进 `requires`。
 3. 运行 `install`、`check`。
 
 ## 引入外部 skill
 
-1. 找到上游仓库与 skill 目录，阅读它的 `SKILL.md` 与仓库许可证。确认它自包含：不引用目录之外的文件；若它调用其他 skill（例如 "Call the Skill tool with ..."），把依赖一并引入并告诉用户。
+1. 找到上游仓库与 skill 目录，阅读它的 `SKILL.md` 与仓库许可证。确认它自包含：不引用目录之外的文件；若它调用其他 skill（例如 "Call the Skill tool with ..."），把依赖一并引入、写进该条目的 `requires`，并告诉用户。
 2. 在 `skills.toml` 添加条目：`upstream = { repo = "<git URL>", path = "<仓库内目录>" }`。
 3. 运行 `update <name>` 预览，再运行 `update <name> --apply` 引入。目录内没有许可证时，脚本会复制仓库根目录的许可证。
 4. 运行 `install`、`check`。
@@ -43,13 +43,13 @@ python3 skills/tiga-skills/scripts/skills.py update [name...] --apply
 
 ## 移除 skill
 
-删除 `skills.toml` 中的条目、`skills/<name>/` 目录，以及 `skills.lock.json` 中的同名项（如有），再运行 `install` 清理链接。若有其他 skill 依赖它，先告诉用户。
+若清单中有条目的 `requires` 包含它，先告诉用户。删除 `skills.toml` 中的条目、`skills/<name>/` 目录，以及 `skills.lock.json` 中的同名项（如有），再运行 `install` 清理链接；`check` 会报出因此未满足的依赖。
 
 ## 审查上游更新
 
 1. 运行 `update`（不带 `--apply`），阅读每个 skill 的 diff。
 2. 逐个向用户概括：行为有何变化；是否新增脚本、外部命令、网络访问或权限要求；是否新增对其他 skill 的依赖；给出是否采纳的建议。
-3. 用户同意后运行 `update <name> --apply`，再运行 `install`（刷新 README 中的 commit）与 `check`。
+3. 用户同意后运行 `update <name> --apply`；新增或去掉了对其他 skill 的依赖时同步修改 `requires`。再运行 `install`（刷新 README 中的 commit）与 `check`。
 
 本地改过的外部 skill 会被 `--apply` 拒绝，此时做三方合并。上游缓存位于 `.tiga/cache/` 下以仓库 URL 命名的目录：
 
