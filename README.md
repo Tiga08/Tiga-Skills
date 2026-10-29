@@ -4,7 +4,7 @@
 
 ## 快速开始
 
-需要 Python 3.11+ 与 git。
+需要 Python 3.11.4+ 与 git。
 
 ```bash
 git clone git@github.com:Tiga08/Tiga-Skills.git ~/Projects/Tiga/Skills

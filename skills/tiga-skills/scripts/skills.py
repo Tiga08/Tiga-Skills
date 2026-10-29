@@ -7,7 +7,7 @@
   update [name...]           预览外部 skill 的上游变化
   update [name...] --apply   采纳上游最新版本并更新 skills.lock.json
 
-只依赖 Python 3.11 标准库与 git。
+只依赖 Python 3.11.4+ 标准库与 git。
 """
 
 import argparse
