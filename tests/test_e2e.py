@@ -15,6 +15,7 @@
 9. 首次引入外部 skill 时没有锁定 commit 或丢失上游 LICENSE
 10. 预览更新时修改了文件；采纳更新后锁定 commit 未前进
 11. 本地改过的外部 skill 被上游版本直接覆盖
+12. 一次采纳多个 skill 时中途失败，已替换的副本与锁定 commit 错位
 """
 
 import json
@@ -276,6 +277,19 @@ class SkillsE2E(unittest.TestCase):
         self.assertIn("本地改过", skill_md.read_text(encoding="utf-8"))
         lock = json.loads((self.repo / "skills.lock.json").read_text(encoding="utf-8"))
         self.assertEqual(lock["beta"], locked)
+
+    def test_update_keeps_lock_in_sync_when_later_skill_fails(self):
+        up = self.make_upstream()
+        self.beta_manifest(up)
+        # gamma 排在 beta 之后，上游没有它的目录，采纳时必然失败
+        with (self.repo / "skills.toml").open("a", encoding="utf-8") as f:
+            f.write(f'\n[skills.gamma]\nzh = "伽马"\ntargets = ["user"]\n'
+                    f'upstream = {{ repo = "file://{up}", path = "skills/gamma" }}\n')
+        self.cli("update", "--apply", ok=False)
+        self.assertIn("第一版", (self.repo / "skills" / "beta" / "SKILL.md").read_text(encoding="utf-8"))
+        lock = json.loads((self.repo / "skills.lock.json").read_text(encoding="utf-8"))
+        self.assertEqual(lock["beta"], self.head(up))
+        self.assertIn("本地未改动", self.cli("update", "beta"))
 
 
 if __name__ == "__main__":

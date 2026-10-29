@@ -312,6 +312,7 @@ def update(args):
             if args.apply:
                 vendor(cache, latest, path, dest)
                 lock[name] = latest
+                save_json(LOCK, lock)
                 print(f"已引入 {name} @ {latest[:12]}")
             continue
         with tempfile.TemporaryDirectory() as tmp:
@@ -330,9 +331,9 @@ def update(args):
             continue
         vendor(cache, latest, path, dest)
         lock[name] = latest
-        print(f"已采纳 {name} @ {latest[:12]}")
-    if args.apply:
+        # 每采纳一个就写入，后面的 skill 失败时副本与锁定 commit 仍然一致
         save_json(LOCK, lock)
+        print(f"已采纳 {name} @ {latest[:12]}")
     report(problems)
 
 
