@@ -1,53 +1,45 @@
-# Tiga-Skills: Centralized Agent Skills Repository
+# Tiga-Skills
 
-Tiga-Skills registers external and custom Agent Skills and exposes them to Claude Code and Codex. It holds content, Bash, and standard-library Python utilities — no application code, build system, or package-managed runtime. The core constraint: `03-skills/` is the unified skill directory (custom skills as real directories, external skills as symlinks), and every registration or removal goes through `./02-scripts/manage-skills.sh`.
+个人 Agent Skills 库：自写 skill 与精选外部 skill 的唯一来源，通过符号链接提供给 Claude Code 与 Codex。
 
-## Structure
+## 结构
 
-| Path | Purpose | Authority |
-| --- | --- | --- |
-| `.agents/skills/` | Project-operation skills; `.claude/skills` and `.codex/skills` are symlinks to it, so every agent shares one library | primary |
-| `03-skills/` | Unified skill directory — custom skills as real directories, external skills as symlinks | primary |
-| `descriptions-zh.conf` | Authoritative Chinese descriptions the README skill table is generated from | primary |
-| `SKILLS-INDEX.md` | Symlink to `~/Projects/AG-Tools/SKILLS-INDEX.md`, the AG-Tools-wide skill index | derived |
-| `SKILLS-REFS.md` | Symlink to `~/Projects/AG-Tools/SKILLS-REFS.md`, the downstream-reference list | derived |
+| 路径 | 用途 |
+| --- | --- |
+| `skills.toml` | 清单，唯一权威来源：有哪些 skill、装到哪里、外部 skill 的来源 |
+| `skills.lock.json` | 外部 skill 锁定的上游 commit，由脚本写入 |
+| `skills/<name>/` | 每个 skill 的实际文件；外部 skill 是锁定版本的副本 |
+| `skills/tiga-skills/` | 管理本仓库的 skill，`scripts/skills.py` 是唯一的管理脚本 |
+| `tests/` | 管理脚本的端到端测试 |
+| `.tiga/` | 被 Git 忽略：安装记录、上游缓存与本地文件 |
 
-The table lists only paths whose purpose or authority is not self-evident; the rest of the tree describes itself. The rendered catalog of registered skills lives in `README.md`.
-
-## Commands
+## 命令
 
 ```bash
-./02-scripts/manage-skills.sh setup                      # user-level symlinks
-./02-scripts/manage-skills.sh add <path> [--name <name>] # register an external skill
-./02-scripts/manage-skills.sh remove <name>              # remove an external skill symlink
-./02-scripts/manage-skills.sh list
-./02-scripts/manage-skills.sh check                      # skill directory, link, and frontmatter health
-./02-scripts/manage-skills.sh update-readme              # regenerate the README skill table
+python3 skills/tiga-skills/scripts/skills.py install|check
+python3 skills/tiga-skills/scripts/skills.py update [name...] [--apply]
+python3 -m unittest discover -s tests -v
 ```
 
-For a path under `$HOME`, `add` writes a user-portable relative symlink (e.g. `../../superpowers/skills/<name>` for a source inside AG-Tools); the required checkout layout is documented in the root `README.md`.
+具体流程见 `skills/tiga-skills/SKILL.md`。
 
-## Boundaries
+## 边界
 
-**Always:**
+**始终：**
 
-- Edit a skill at its source: project-operation skills in `.agents/skills/<name>/`, custom skills in `03-skills/<name>/`, external skills in their own upstream repository.
-- Route registration, removal, and user-level link setup through `./02-scripts/manage-skills.sh` — hand-made link changes leave registration, user-level discovery, and README metadata out of sync.
-- Keep `descriptions-zh.conf` aligned with what each skill actually does; its `<name>.description` is what the README table's description column is built from, and `<name>.arguments` is the fallback for the parameter column when a skill has no `argument-hint` frontmatter (external skills, whose sources must not be edited).
-- After any registration, removal, or `descriptions-zh.conf` change, run `update-readme`, then `check`.
-- Keep `02-scripts/*.sh` executable UTF-8 Bash in the existing direct-command style, and run `bash -n` on any shell script you modify. Invoke skill-local Python helpers through `python3` and follow their owning `SKILL.md`; there is no shared test suite.
+- 增删 skill 或改变安装位置时，先改 `skills.toml`，再运行 `install`；结束前运行 `check`。
+- 外部 skill 的更新先预览 diff、向用户说明变化，确认后再 `--apply`。
+- 修改 `skills.py` 时先补端到端测试，再改实现，并跑完整测试。
 
-**Ask First:**
+**先询问：**
 
-- Creating or deleting skills, prompts, or scripts.
-- Registering, removing, or renaming a skill.
-- Pulling or registering content from an external upstream repository — inspect its status first.
-- Creating a subdirectory `CLAUDE.md`; this repository intentionally keeps governance at the root unless the user requests a narrower file.
+- 引入、移除 skill，或改变安装位置。
+- 修改外部 skill 的本地副本（之后的更新需要三方合并）。
+- 在其他项目仓库中提交 skill 链接的变化。
 
-**Never:**
+**绝不：**
 
-- Modify an external skill source reached through a `03-skills/` symlink; that content belongs to an upstream repository.
-- Create or delete symlinks under `03-skills/` by hand, bypassing `manage-skills.sh`.
-- Hand-edit the README block between `<!-- BEGIN SKILL LIST -->` and `<!-- END SKILL LIST -->`.
-- Fabricate skill names, sources, or descriptions.
-- Reintroduce retired top-level layouts such as `00-skill-index/`, `02-agent-skills/`, `03-workflows/`, or `05-custom-skills/`.
+- 手工创建或删除 `~/.claude/skills`、`~/.agents/skills` 与项目 `.agents/skills` 中指向本仓库的链接。
+- 手工编辑 README 中 `<!-- BEGIN SKILL LIST -->` 与 `<!-- END SKILL LIST -->` 之间的内容。
+- 手工修改 `skills.lock.json`，三方合并完成后更新 commit 除外。
+- 捏造 skill 名称、来源、commit 或描述。
