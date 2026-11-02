@@ -1,6 +1,6 @@
 ---
 name: tiga-skills
-description: Manage the Tiga-Skills library at ~/Projects/Tiga/Skills — install user- and project-level skill links from skills.toml, add or remove skills, review and adopt upstream updates of vendored external skills, and discover new skills from the watch list. Use when the user wants to add, remove, install, update, check, or find skills, or install a skill into a project.
+description: Manage the Tiga-Skills library at ~/Projects/Tiga/Skills. Use when adding, removing, installing (user-level or into a project), checking, updating, or discovering skills.
 ---
 
 # Tiga-Skills 管理
@@ -14,7 +14,7 @@ description: Manage the Tiga-Skills library at ~/Projects/Tiga/Skills — instal
 确定性操作一律交给脚本：
 
 ```bash
-python3 skills/tiga-skills/scripts/skills.py install           # 按清单创建、修复、清理链接，刷新 README 清单
+python3 skills/tiga-skills/scripts/skills.py install           # 按清单创建、修复、清理链接，刷新 README skill 列表
 python3 skills/tiga-skills/scripts/skills.py check             # 只读检查，有问题时退出码为 1
 python3 skills/tiga-skills/scripts/skills.py update [name...]  # 预览外部 skill 的上游变化
 python3 skills/tiga-skills/scripts/skills.py update [name...] --apply
@@ -34,7 +34,7 @@ python3 skills/tiga-skills/scripts/skills.py update [name...] --apply
 
 1. 找到上游仓库与 skill 目录，阅读它的 `SKILL.md` 与仓库许可证。确认它自包含：不引用目录之外的文件；若它调用其他 skill（例如 "Call the Skill tool with ..."），把依赖一并引入、写进该条目的 `requires`，并告诉用户。
 2. 在 `skills.toml` 添加条目：`upstream = { repo = "<git URL>", path = "<仓库内目录>" }`。
-3. 运行 `update <name>` 预览，再运行 `update <name> --apply` 引入。目录内没有许可证时，脚本会复制仓库根目录的许可证。
+3. 运行 `update <name>` 预览，再运行 `update <name> --apply` 引入。目录内没有许可证时，脚本会复制仓库根目录的许可证。`skills/<name>/` 已存在且与上游不同时脚本拒绝引入，向用户说明，由用户决定如何处理该目录。
 4. 运行 `install`、`check`。
 
 ## 安装到项目
@@ -62,6 +62,6 @@ python3 skills/tiga-skills/scripts/skills.py update [name...] --apply
 ## 发现新 skill
 
 1. 从 `skills.toml` 的 `[watch].repos` 选候选仓库；用户另给的仓库同样适用。
-2. 浅克隆到 `.tiga/cache/discover/`：`git clone --depth 1 --filter=blob:none <url> .tiga/cache/discover/<仓库名>`。
+2. 浅克隆到 `.tiga/cache/discover/`：`git clone --depth 1 --filter=blob:none <url> .tiga/cache/discover/<仓库名>`。该目录已存在时先删除再克隆，它只是缓存。
 3. 检索其中各 `SKILL.md` 的 `name` 与 `description`，按用户需求推荐少量候选，说明用途、依赖、是否自包含、与已有 skill 是否重叠。
 4. 用户选定后，按「引入外部 skill」处理。

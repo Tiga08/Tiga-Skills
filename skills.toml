@@ -1,7 +1,7 @@
 # Tiga-Skills 清单：唯一的权威来源，修改后运行 install 与 check。
 #
 # 每个 [skills.<name>] 对应 skills/<name>/：
-#   zh        README 技能清单中的中文描述
+#   zh        README skill 列表中的中文描述
 #   targets   "user" 链接到 ~/.claude/skills 与 ~/.agents/skills；
 #             "project:<路径>" 链接到该项目的 .agents/skills（路径可用 ~）
 #   upstream  外部 skill 的来源仓库与目录；锁定的 commit 记录在 skills.lock.json

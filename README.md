@@ -15,7 +15,7 @@ python3 skills/tiga-skills/scripts/skills.py check     # 检查
 
 之后在任意 agent 会话中让 `tiga-skills` 处理增删、更新与发现。
 
-## Skill 清单
+## Skill 列表
 
 由 `install` 根据 `skills.toml` 生成。
 

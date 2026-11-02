@@ -2,7 +2,7 @@
 """Tiga-Skills 管理脚本。
 
 以仓库根目录的 skills.toml 为唯一权威来源：
-  install                    按清单创建、修复、清理链接，并刷新 README 技能清单
+  install                    按清单创建、修复、清理链接，并刷新 README skill 列表
   check                      只读检查清单、skill 目录、链接与 README，有问题时退出码为 1
   update [name...]           预览外部 skill 的上游变化
   update [name...] --apply   采纳上游最新版本并更新 skills.lock.json
@@ -183,7 +183,7 @@ def install(_args):
     readme = render_readme(manifest)
     if README.read_text(encoding="utf-8") != readme:
         README.write_text(readme, encoding="utf-8")
-        changes.append("刷新 README.md 技能清单")
+        changes.append("刷新 README.md skill 列表")
     print("\n".join(changes) or "无变化")
     report(errors)
 
@@ -287,7 +287,7 @@ def check(_args):
         if not (bridge.is_symlink() and os.readlink(bridge) == BRIDGE):
             problems.append(f"{bridge} 不是指向 {BRIDGE} 的链接，Claude Code 读不到该项目的 skill")
     if README.read_text(encoding="utf-8") != render_readme(manifest):
-        problems.append("README.md 技能清单已过期（运行 install 刷新）")
+        problems.append("README.md skill 列表已过期（运行 install 刷新）")
     report(problems, ok="全部正常")
 
 

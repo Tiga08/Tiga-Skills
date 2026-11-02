@@ -41,5 +41,5 @@ python3 -m unittest discover -s tests -v
 
 - 手工创建或删除 `~/.claude/skills`、`~/.agents/skills` 与项目 `.agents/skills` 中指向本仓库的链接。
 - 手工编辑 README 中 `<!-- BEGIN SKILL LIST -->` 与 `<!-- END SKILL LIST -->` 之间的内容。
-- 手工修改 `skills.lock.json`，三方合并完成后更新 commit 除外。
+- 手工修改 `skills.lock.json`，移除 skill 时删除同名项、三方合并完成后更新 commit 除外。
 - 捏造 skill 名称、来源、commit 或描述。
