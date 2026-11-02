@@ -48,6 +48,11 @@ zh = "对整个仓库做一次性质量审查：bug、安全、负载、测试�
 targets = ["user"]
 upstream = { repo = "https://github.com/DietrichGebert/ponytail.git", path = "skills/ponytail-audit" }
 
+[skills.frontend-design]
+zh = "UI 视觉设计指南：先定配色、字体、布局并对照需求自查，避开 AI 生成页面的常见套路。"
+targets = ["project:~/Projects/Tiga/Website"]
+upstream = { repo = "https://github.com/anthropics/skills.git", path = "skills/frontend-design" }
+
 # 候选上游仓库：只用于按需发现新 skill，不克隆、不同步。
 [watch]
 repos = [

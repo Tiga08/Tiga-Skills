@@ -23,6 +23,7 @@ python3 skills/tiga-skills/scripts/skills.py check     # 检查
 | 名称 | 来源 | 安装位置 | 描述 |
 | --- | --- | --- | --- |
 | domain-modeling | `mattpocock/skills` @ `4ae2317` | 用户级 | 构建并打磨项目的领域模型，维护 GLOSSARY.md 与 ADR；grill-with-docs 的依赖。 |
+| frontend-design | `anthropics/skills` @ `ca45fc4` | 项目 `~/Projects/Tiga/Website` | UI 视觉设计指南：先定配色、字体、布局并对照需求自查，避开 AI 生成页面的常见套路。 |
 | grill-with-docs | `mattpocock/skills` @ `4ae2317` | 用户级 | 以追问方式打磨计划或设计，同时沉淀 ADR 与术语表；依赖 grilling 与 domain-modeling。 |
 | grilling | `mattpocock/skills` @ `4ae2317` | 用户级 | 以设计树方式分轮追问计划、决策或想法，直到达成共同理解；grill-with-docs 的依赖。 |
 | handoff | `mattpocock/skills` @ `4ae2317` | 用户级 | 把当前会话压缩成交接文档，存到系统临时目录，供新会话或其他 agent 接手；仅手动调用。 |
