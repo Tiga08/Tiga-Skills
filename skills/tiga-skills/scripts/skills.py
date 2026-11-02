@@ -11,6 +11,7 @@
 """
 
 import argparse
+import functools
 import io
 import json
 import os
@@ -292,8 +293,9 @@ def check(_args):
 
 # ---------- update ----------
 
+@functools.cache
 def fetch(repo):
-    """把上游仓库拉到 .tiga/cache/：只取提交与目录结构，文件内容按需下载。"""
+    """把上游仓库拉到 .tiga/cache/：只取提交与目录结构，文件内容按需下载；每次运行每个仓库只拉一次。"""
     cache = CACHE / re.sub(r"[^\w.-]+", "-", repo.removesuffix(".git")).strip("-")
     if cache.exists():
         git(cache, "fetch", "--quiet", "origin")
