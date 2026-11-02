@@ -56,8 +56,5 @@ upstream = { repo = "https://github.com/anthropics/skills.git", path = "skills/f
 # 候选上游仓库：只用于按需发现新 skill，不克隆、不同步。
 [watch]
 repos = [
-  "https://github.com/affaan-m/ECC",
-  "https://github.com/DietrichGebert/ponytail",
-  "https://github.com/Imbad0202/academic-research-skills",
   "https://github.com/mattpocock/skills",
 ]
