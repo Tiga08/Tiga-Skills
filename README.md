@@ -25,8 +25,11 @@ python3 skills/tiga-skills/scripts/skills.py check     # 检查
 | domain-modeling | `mattpocock/skills` @ `4ae2317` | 用户级 | 构建并打磨项目的领域模型，维护 GLOSSARY.md 与 ADR；grill-with-docs 的依赖。 |
 | grill-with-docs | `mattpocock/skills` @ `4ae2317` | 用户级 | 以追问方式打磨计划或设计，同时沉淀 ADR 与术语表；依赖 grilling 与 domain-modeling。 |
 | grilling | `mattpocock/skills` @ `4ae2317` | 用户级 | 以设计树方式分轮追问计划、决策或想法，直到达成共同理解；grill-with-docs 的依赖。 |
+| handoff | `mattpocock/skills` @ `4ae2317` | 用户级 | 把当前会话压缩成交接文档，存到系统临时目录，供新会话或其他 agent 接手；仅手动调用。 |
+| ponytail-audit | `DietrichGebert/ponytail` @ `96608e0` | 用户级 | 对整个仓库做一次性质量审查：bug、安全、负载、测试缺口、速度与可删减代码，按优先级排序，只出报告不改代码。 |
+| retro | `mattpocock/skills` @ `4ae2317` | 用户级 | 复盘一次编码会话，从导航、自动检查、AGENTS.md 精简、工具开销等方面提出环境改进建议；依赖 writing-for-agents，仅手动调用。 |
 | tiga-skills | 自写 | 用户级 | 管理本仓库：按清单安装用户级与项目级 skill，增删 skill，审查并采纳外部 skill 的上游更新，从关注列表发现新 skill。 |
-| writing-for-agents | `mattpocock/skills` @ `4ae2317` | 用户级 | 编写供 Agent 读取的文档（skill、AGENTS.md、CLAUDE.md）的参考：上下文指针、信息层级、完成标准与精简。 |
+| writing-for-agents | `mattpocock/skills` @ `4ae2317` | 用户级 | 编写供 Agent 读取的文档（skill、AGENTS.md、CLAUDE.md）的参考：上下文指针、信息层级、完成标准与精简；retro 的依赖。 |
 <!-- END SKILL LIST -->
 
 ## 安装位置

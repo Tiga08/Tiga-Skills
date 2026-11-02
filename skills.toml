@@ -28,9 +28,25 @@ targets = ["user"]
 upstream = { repo = "https://github.com/mattpocock/skills.git", path = "skills/engineering/domain-modeling" }
 
 [skills.writing-for-agents]
-zh = "编写供 Agent 读取的文档（skill、AGENTS.md、CLAUDE.md）的参考：上下文指针、信息层级、完成标准与精简。"
+zh = "编写供 Agent 读取的文档（skill、AGENTS.md、CLAUDE.md）的参考：上下文指针、信息层级、完成标准与精简；retro 的依赖。"
 targets = ["user"]
 upstream = { repo = "https://github.com/mattpocock/skills.git", path = "skills/productivity/writing-for-agents" }
+
+[skills.handoff]
+zh = "把当前会话压缩成交接文档，存到系统临时目录，供新会话或其他 agent 接手；仅手动调用。"
+targets = ["user"]
+upstream = { repo = "https://github.com/mattpocock/skills.git", path = "skills/productivity/handoff" }
+
+[skills.retro]
+zh = "复盘一次编码会话，从导航、自动检查、AGENTS.md 精简、工具开销等方面提出环境改进建议；依赖 writing-for-agents，仅手动调用。"
+targets = ["user"]
+upstream = { repo = "https://github.com/mattpocock/skills.git", path = "skills/engineering/retro" }
+requires = ["writing-for-agents"]
+
+[skills.ponytail-audit]
+zh = "对整个仓库做一次性质量审查：bug、安全、负载、测试缺口、速度与可删减代码，按优先级排序，只出报告不改代码。"
+targets = ["user"]
+upstream = { repo = "https://github.com/DietrichGebert/ponytail.git", path = "skills/ponytail-audit" }
 
 # 候选上游仓库：只用于按需发现新 skill，不克隆、不同步。
 [watch]
