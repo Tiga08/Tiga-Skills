@@ -39,6 +39,9 @@ LICENSE_RE = re.compile(r"^(licen[cs]e|copying)(\.\w+)?$", re.I)
 ESCAPE_RE = re.compile(r"\]\((\.\./[^)\s]*)\)")
 # 比较本地副本与上游版本时忽略的系统与运行时产物
 IGNORED = {".DS_Store", "__pycache__"}
+# 清单条目与 upstream 允许的字段，拼错的字段不会被静默忽略
+FIELDS = ("zh", "targets", "upstream", "requires")
+UPSTREAM_FIELDS = ("repo", "path")
 
 
 # ---------- 基础 ----------
@@ -53,7 +56,20 @@ def git(cwd, *args, binary=False):
 
 def load_manifest():
     with MANIFEST.open("rb") as f:
-        return tomllib.load(f).get("skills", {})
+        manifest = tomllib.load(f).get("skills", {})
+    problems = []
+    for name, spec in manifest.items():
+        if unknown := spec.keys() - FIELDS:
+            problems.append(f"skills.toml 中的 {name} 有未知字段：{'、'.join(sorted(unknown))}（可用：{'、'.join(FIELDS)}）")
+        if "targets" not in spec:
+            problems.append(f"skills.toml 中的 {name} 缺少 targets")
+        if "upstream" in spec:
+            upstream = spec["upstream"]
+            if unknown := upstream.keys() - UPSTREAM_FIELDS:
+                problems.append(f"skills.toml 中 {name} 的 upstream 有未知字段：{'、'.join(sorted(unknown))}")
+            problems += [f"skills.toml 中 {name} 的 upstream 缺少 {k}" for k in UPSTREAM_FIELDS if k not in upstream]
+    report(problems)
+    return manifest
 
 
 def load_json(path, default):
@@ -89,8 +105,17 @@ def project_dirs(manifest):
     }
 
 
+def missing_projects(manifest):
+    """不存在的项目根目录多半是路径写错，只报告，不创建。"""
+    return [
+        f"项目目录不存在：{p}（检查 skills.toml 中的 project: 路径）"
+        for p in sorted(project_dirs(manifest))
+        if not p.is_dir()
+    ]
+
+
 def desired_links(manifest):
-    """返回 {链接路径: 链接内容}。用户级写绝对路径，项目级写相对路径。"""
+    """返回 {链接路径: 链接内容}。用户级写绝对路径，项目级写相对路径；跳过不存在的项目。"""
     links = {}
     for name, spec in manifest.items():
         source = SKILLS / name
@@ -99,6 +124,8 @@ def desired_links(manifest):
                 for d in USER_DIRS:
                     links[Path.home() / d / name] = str(source)
             elif target.startswith("project:"):
+                if not project_root(target).is_dir():
+                    continue
                 link = project_root(target) / ".agents" / "skills" / name
                 links[link] = os.path.relpath(source, link.parent)
             else:
@@ -127,7 +154,7 @@ def candidate_links(manifest):
 def install(_args):
     manifest = load_manifest()
     desired = desired_links(manifest)
-    changes, errors = [], []
+    changes, errors = [], missing_projects(manifest)
     for link in sorted(candidate_links(manifest) - desired.keys()):
         link.unlink()
         changes.append(f"删除 {link}")
@@ -144,7 +171,7 @@ def install(_args):
         link.parent.mkdir(parents=True, exist_ok=True)
         link.symlink_to(target)
         changes.append(f"链接 {link} -> {target}")
-    for project in sorted(project_dirs(manifest)):
+    for project in sorted(p for p in project_dirs(manifest) if p.is_dir()):
         bridge = project / ".claude" / "skills"
         if not os.path.lexists(bridge):
             bridge.parent.mkdir(parents=True, exist_ok=True)
@@ -253,7 +280,8 @@ def check(_args):
         elif not link.exists():
             problems.append(f"链接失效 {link}")
     problems += [f"多余链接 {l}（运行 install 清理）" for l in sorted(candidate_links(manifest) - desired.keys())]
-    for project in sorted(project_dirs(manifest)):
+    problems += missing_projects(manifest)
+    for project in sorted(p for p in project_dirs(manifest) if p.is_dir()):
         bridge = project / ".claude" / "skills"
         if not (bridge.is_symlink() and os.readlink(bridge) == BRIDGE):
             problems.append(f"{bridge} 不是指向 {BRIDGE} 的链接，Claude Code 读不到该项目的 skill")
@@ -327,12 +355,19 @@ def update(args):
         locked = lock.get(name)
         dest = SKILLS / name
         if not locked:
-            print(f"== {name}：尚未引入，上游最新 {latest[:12]}")
-            if args.apply:
-                vendor(cache, latest, path, dest)
-                lock[name] = latest
-                save_json(LOCK, lock)
-                print(f"已引入 {name} @ {latest[:12]}")
+            with tempfile.TemporaryDirectory() as tmp:
+                fresh = materialize(cache, latest, path, Path(tmp) / name)
+                conflict = dest.exists() and snapshot(dest) != snapshot(fresh)
+            print(f"== {name}：尚未引入，上游最新 {latest[:12]}" + ("（本地已有目录且与上游不同）" if conflict else ""))
+            if not args.apply:
+                continue
+            if conflict:
+                problems.append(f"{name} 本地已有目录且与上游不同，未引入；先处理 skills/{name}/ 再重试")
+                continue
+            vendor(cache, latest, path, dest)
+            lock[name] = latest
+            save_json(LOCK, lock)
+            print(f"已引入 {name} @ {latest[:12]}")
             continue
         with tempfile.TemporaryDirectory() as tmp:
             pristine = materialize(cache, locked, path, Path(tmp) / name)

@@ -17,6 +17,9 @@
 11. 本地改过的外部 skill 被上游版本直接覆盖
 12. 一次采纳多个 skill 时中途失败，已替换的副本与锁定 commit 错位
 13. requires 中的 skill 未登记或没有覆盖依赖方的安装位置时，check 没有报出
+14. project: 路径不存在（如拼写错误）时，install 静默创建该目录，check 报全部正常
+15. 清单字段拼错或缺少必填字段时被静默忽略，或抛出 traceback
+16. 首次引入时覆盖了 skills/<name>/ 中已有且与上游不同的内容
 """
 
 import json
@@ -205,6 +208,35 @@ class SkillsE2E(unittest.TestCase):
         # 其余条目照常安装
         self.assertTrue((self.home / ".claude" / "skills" / "tiga-skills").is_symlink())
 
+    def test_missing_project_dir_is_reported_not_created(self):
+        self.basic_manifest(alpha_targets='["project:~/Projects/tpyo"]')
+        output = self.cli("install", ok=False)
+        self.assertIn("项目目录不存在", output)
+        self.assertFalse(os.path.lexists(self.home / "Projects" / "tpyo"))
+        # 其余目标照常安装
+        self.assertTrue((self.home / ".claude" / "skills" / "tiga-skills").is_symlink())
+        self.assertIn("项目目录不存在", self.cli("check", ok=False))
+        self.assertFalse(os.path.lexists(self.home / "Projects" / "tpyo"))
+
+    def test_manifest_rejects_unknown_or_missing_fields(self):
+        cases = {
+            'targets = ["user"]\nrequries = ["x"]': ("requries",),
+            'target = ["user"]': ("target", "缺少 targets"),
+            'targets = ["user"]\nupstream = { repo = "file:///x" }': ("缺少 path",),
+            'targets = ["user"]\nupstream = { repo = "file:///x", path = "p", ref = "main" }': ("ref",),
+        }
+        for body, expected in cases.items():
+            self.manifest(f'[skills.tiga-skills]\nzh = "管理"\ntargets = ["user"]\n\n'
+                          f'[skills.alpha]\nzh = "阿尔法"\n{body}\n')
+            for command in ("install", "check", "update"):
+                with self.subTest(body=body, command=command):
+                    output = self.cli(command, ok=False)
+                    for text in expected:
+                        self.assertIn(text, output)
+                    self.assertNotIn("Traceback", output)
+        # 清单有误时 install 不做任何改动
+        self.assertFalse(os.path.lexists(self.home / ".claude"))
+
     def test_install_repairs_broken_link(self):
         claude = self.home / ".claude" / "skills"
         claude.mkdir(parents=True)
@@ -235,6 +267,7 @@ class SkillsE2E(unittest.TestCase):
 
     def test_check_reports_unmet_requires(self):
         write_skill(self.repo / "skills" / "dep", "dep")
+        (self.home / "Projects" / "other").mkdir()
         self.manifest(f"""\
             [skills.tiga-skills]
             zh = "管理"
@@ -318,6 +351,27 @@ class SkillsE2E(unittest.TestCase):
         self.assertIn("本地改过", skill_md.read_text(encoding="utf-8"))
         lock = json.loads((self.repo / "skills.lock.json").read_text(encoding="utf-8"))
         self.assertEqual(lock["beta"], locked)
+
+    def test_update_refuses_to_overwrite_existing_dir_on_first_vendor(self):
+        up = self.make_upstream()
+        self.beta_manifest(up)
+        beta = self.repo / "skills" / "beta"
+        write_skill(beta, "beta", body="本地自写")
+        self.assertIn("本地已有目录且与上游不同", self.cli("update", "beta"))
+        self.cli("update", "beta", "--apply", ok=False)
+        self.assertIn("本地自写", (beta / "SKILL.md").read_text(encoding="utf-8"))
+        self.assertFalse((self.repo / "skills.lock.json").exists())
+
+    def test_update_records_lock_when_existing_dir_matches_upstream(self):
+        up = self.make_upstream()
+        self.beta_manifest(up)
+        self.cli("update", "beta", "--apply")
+        # 锁定项丢失，但本地副本与上游最新版一致：只补记锁定 commit
+        (self.repo / "skills.lock.json").unlink()
+        self.cli("update", "beta", "--apply")
+        lock = json.loads((self.repo / "skills.lock.json").read_text(encoding="utf-8"))
+        self.assertEqual(lock["beta"], self.head(up))
+        self.assertIn("本地未改动", self.cli("update", "beta"))
 
     def test_update_keeps_lock_in_sync_when_later_skill_fails(self):
         up = self.make_upstream()
