@@ -53,6 +53,10 @@ zh = "UI 视觉设计指南：先定配色、字体、布局并对照需求自�
 targets = ["project:~/Projects/Tiga/Website"]
 upstream = { repo = "https://github.com/anthropics/skills.git", path = "skills/frontend-design" }
 
+[skills.short-video-editing]
+zh = "把手机原片做成竖屏短视频发布包：素材分析、中文转写去废话、剪辑方案确认、生成 Final Cut Pro 工程（FCPXML）、字幕、封面与分平台文案；也出拍摄清单。"
+targets = ["project:~/Projects/3Cups"]
+
 # 候选上游仓库：只用于按需发现新 skill，不克隆、不同步。
 [watch]
 repos = [
