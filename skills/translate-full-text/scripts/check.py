@@ -6,8 +6,11 @@
 
 每块比对：标题、段落、图片、表格、公式、代码块、脚注一一对应，图片、公式、代码块的顺序也一致；译文里没有整段英文和英文标题；
 keep 块除标题外与原文逐行一致；原文块和译文里都没有未识别的公式占位符。
+脚注的引用和定义可以分在两块里，所以单块只要求译文与原文块一致，悬空的脚注在整体检查里查。
+每块还把校对后的原文块与 source.md 里提取出来的原文比一次：图片少了，或英文词数少了 5% 以上，给出提醒，
+校对的人要说明删掉的是什么（页眉页脚、换成文字的文字框图片是正常的）。
 整体检查：每块都有译文；header.md 以 H1 开头；terms.md 有「## 翻译术语表」；
-translation.md 是最新拼接结果；它引用的图片都存在。
+translation.md 是最新拼接结果；它引用的图片都存在；它的脚注引用和定义成对、编号不重复。
 """
 
 import re
@@ -31,6 +34,7 @@ FOOTNOTE_REF = re.compile(r"\[\^([^\]]+)\](?!:)")
 CJK = re.compile(r"[　-〿㐀-䶿一-鿿＀-￯]")
 WORD = re.compile(r"[A-Za-z]+(?:['’][A-Za-z]+)?")
 ENGLISH_RUN = 8  # 连续这么多个英文词、中间没有中文，就算没译
+PROOFREAD_LOSS = 0.05  # 校对后的原文块比提取稿少这么大比例的英文词，就提醒；删页眉页脚一般只少 2–3%
 
 # 判断英文残留前先去掉的内容：行内代码、行内公式、图片、链接地址、网址、脚注和文献引用、书名号里的原名、HTML 标签
 NOISE = [
@@ -152,7 +156,11 @@ def compare(label, src_text, zh_text, action, errors, warnings):
     count("标题", len(src.headings), len(zh.headings))
     count("段落", src.blocks, zh.blocks, "，疑似漏译")
     count("表格", src.tables, zh.tables)
-    count("脚注定义", len(src.footnote_defs), len(zh.footnote_defs))
+    for name, a, b in (("引用", src.footnote_refs, zh.footnote_refs), ("定义", set(src.footnote_defs), set(zh.footnote_defs))):
+        for ref in sorted(a - b):
+            errors.append(f"{label} 脚注 [^{ref}] 的{name}丢了")
+        for ref in sorted(b - a):
+            errors.append(f"{label} 多出原文没有的脚注{name} [^{ref}]")
     for name, a, b in (("图片", src.images, zh.images), ("公式", src.formulas, zh.formulas), ("代码块", src.code, zh.code)):
         for item in Counter(a) - Counter(b):
             errors.append(f"{label} {name}缺失或被改动：{short(item)}")
@@ -160,10 +168,6 @@ def compare(label, src_text, zh_text, action, errors, warnings):
             (errors if name == "图片" else warnings).append(f"{label} 多出原文没有的{name}：{short(item)}")
         if Counter(a) == Counter(b) and a != b:
             errors.append(f"{label} {name}的顺序与原文不一致")
-    for ref in sorted(zh.footnote_refs - set(zh.footnote_defs)):
-        errors.append(f"{label} 脚注 [^{ref}] 只有引用没有定义")
-    for ref in sorted(set(zh.footnote_defs) - zh.footnote_refs):
-        errors.append(f"{label} 脚注 [^{ref}] 只有定义没有引用")
     for title in zh.headings:
         if heading_untranslated(title, set(src.headings)):
             errors.append(f"{label} 标题疑似未翻译：{short(title)}")
@@ -179,6 +183,28 @@ def compare(label, src_text, zh_text, action, errors, warnings):
             errors.append(f"{label} 疑似未翻译的英文：{short(segment)}")
 
 
+def proofread(label, original_text, src_text, warnings):
+    """校对后的原文块比提取稿少了图片或明显少了文字时提醒。"""
+    original, src = parse(original_text), parse(src_text)
+    gone = list((Counter(original.images) - Counter(src.images)).elements())
+    if gone:
+        warnings.append(f"{label} 校对时去掉了 {len(gone)} 张图片，逐张说明去向：{'、'.join(gone)}")
+    before, after = len(WORD.findall(original_text)), len(WORD.findall(src_text))
+    if after < before * (1 - PROOFREAD_LOSS):
+        warnings.append(f"{label} 校对后英文词数少了 {(before - after) / before:.0%}（提取稿 {before}，原文块 {after}），说明删掉了什么")
+
+
+def dangling_footnotes(text, label):
+    doc = parse(text)
+    defs = set(doc.footnote_defs)
+    repeated = sorted(ref for ref, n in Counter(doc.footnote_defs).items() if n > 1)
+    return (
+        [f"{label} 脚注 [^{ref}] 只有引用没有定义" for ref in sorted(doc.footnote_refs - defs)]
+        + [f"{label} 脚注 [^{ref}] 只有定义没有引用" for ref in sorted(defs - doc.footnote_refs)]
+        + [f"{label} 脚注 [^{ref}] 重复定义，在原文块和译文块里改成带块号的编号 [^NNN-n]" for ref in repeated]
+    )
+
+
 def image_errors(text, base, label):
     refs = MD_IMAGE.findall(text) + HTML_IMAGE.findall(text)
     return [f"{label} 引用的图片不存在：{ref}" for ref in dict.fromkeys(refs) if not (base / ref).is_file()]
@@ -188,7 +214,10 @@ def check(ws, only=None):
     """返回 (错误, 提醒)。"""
     errors, warnings = [], []
     chunks = ws / "chunks"
-    for num, _, action, title in load_plan(ws):
+    plan = load_plan(ws)
+    source = (ws / "source.md").read_text(encoding="utf-8").splitlines(keepends=True)
+    ends = [start for _, start, _, _ in plan[1:]] + [len(source) + 1]
+    for (num, start, action, title), end in zip(plan, ends):
         if action == "skip" or (only and num != only):
             continue
         src, zh = chunks / f"{num}.src.md", chunks / f"{num}.zh.md"
@@ -197,8 +226,9 @@ def check(ws, only=None):
         elif not zh.is_file():
             errors.append(f"{num}（{title}）还没有译文 {zh.name}")
         else:
-            zh_text = zh.read_text(encoding="utf-8")
-            compare(num, src.read_text(encoding="utf-8"), zh_text, action, errors, warnings)
+            src_text, zh_text = src.read_text(encoding="utf-8"), zh.read_text(encoding="utf-8")
+            proofread(num, "".join(source[start - 1 : end - 1]), src_text, warnings)
+            compare(num, src_text, zh_text, action, errors, warnings)
             if only:
                 errors += image_errors(zh_text, ws, num)
     if only:
@@ -218,6 +248,7 @@ def check(ws, only=None):
         if expected is not None and text != expected:
             errors.append("translation.md 不是最新拼接结果，运行 chunks.py join 重新拼接")
         errors += image_errors(text, ws, "translation.md")
+        errors += dangling_footnotes(text, "translation.md")
     return errors, warnings
 
 

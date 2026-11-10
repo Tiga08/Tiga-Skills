@@ -21,6 +21,9 @@
 13. docling 提取稿里的软连字符、列表的「- · 」前缀、&amp; 没有清掉
 14. 括号里的作者-年份引用串、只有算法名的标题被误报为未翻译；公式、图片、代码的顺序变了没报错
 15. 校对时看不清公式：render.py 不能放大、不能切条，也不导出文字层
+16. 脚注的引用和定义被切在两块里（长章拆块），单块检查误报，子 agent 无法交稿；
+   拼接后的悬空脚注、译文丢掉的脚注引用没报错；各块并行校对时都把页底脚注编成 [^1]，拼接后重号没报错
+17. 校对原文块时删掉了内容或图片，检查没有提醒；删页眉页脚这类少量删减被误提醒
 """
 
 import json
@@ -302,14 +305,92 @@ class CheckTest(Workspace):
 class CheckMiniTest(Workspace):
     """单块的小工作区，用来测误报和顺序。"""
 
-    def mini(self, src, zh):
+    def mini(self, src, zh, original=None):
+        """original 是提取出来的原文；不给时与校对后的原文块相同。"""
         ws = self.ws
-        (ws / "chunks").mkdir(parents=True)
-        (ws / "source.md").write_text(src, encoding="utf-8")
+        (ws / "chunks").mkdir(parents=True, exist_ok=True)
+        (ws / "source.md").write_text(original or src, encoding="utf-8")
         (ws / "chunks.txt").write_text("1 translate 正文\n", encoding="utf-8")
         (ws / "chunks" / "001.src.md").write_text(src, encoding="utf-8")
         (ws / "chunks" / "001.zh.md").write_text(zh, encoding="utf-8")
         return run("check.py", ws, "--chunk", "001")
+
+    def two_chunks(self, src1, src2, zh1, zh2):
+        """两个 translate 块的工作区，拼接后返回整体检查的结果。"""
+        ws = self.ws
+        (ws / "chunks").mkdir(parents=True)
+        (ws / "source.md").write_text(src1 + src2, encoding="utf-8")
+        (ws / "chunks.txt").write_text(f"1 translate 上\n{src1.count(chr(10)) + 1} translate 下\n", encoding="utf-8")
+        for num, src, zh in (("001", src1, zh1), ("002", src2, zh2)):
+            (ws / "chunks" / f"{num}.src.md").write_text(src, encoding="utf-8")
+            (ws / "chunks" / f"{num}.zh.md").write_text(zh, encoding="utf-8")
+        (ws / "header.md").write_text(HEADER, encoding="utf-8")
+        (ws / "terms.md").write_text(TERMS, encoding="utf-8")
+        code, out = run("chunks.py", "join", ws)
+        self.assertEqual(code, 0, out)
+        return run("check.py", ws)
+
+    def test_footnote_split_across_chunks_passes(self):
+        src1, zh1 = "Loss is squared error [^1].\n\n", "损失是平方误差[^1]。\n\n"
+        src2, zh2 = "More text here.\n\n[^1]: Explains the loss.\n", "更多文字。\n\n[^1]: 解释损失。\n"
+        code, out = self.mini(src1, zh1)
+        self.assertEqual(code, 0, out)
+        shutil.rmtree(self.ws)
+        code, out = self.two_chunks(src1, src2, zh1, zh2)
+        self.assertEqual(code, 0, out)
+
+    def test_dangling_footnote_after_join(self):
+        code, out = self.two_chunks("Loss is squared error [^1].\n\n", "More text here.\n", "损失是平方误差[^1]。\n\n", "更多文字。\n")
+        self.assertEqual(code, 1, out)
+        self.assertIn("只有引用没有定义", out)
+
+    def test_duplicate_footnote_ids_after_join(self):
+        code, out = self.two_chunks(
+            "Loss is squared error [^1].\n\n[^1]: Explains the loss.\n\n", "Goals matter [^1].\n\n[^1]: Explains goals.\n",
+            "损失是平方误差[^1]。\n\n[^1]: 解释损失。\n\n", "目标很重要[^1]。\n\n[^1]: 解释目标。\n",
+        )
+        self.assertEqual(code, 1, out)
+        self.assertIn("重复", out)
+
+    def test_chunk_prefixed_footnote_ids_pass(self):
+        code, out = self.two_chunks(
+            "Loss is squared error [^001-1].\n\n[^001-1]: Explains the loss.\n\n", "Goals matter [^002-1].\n\n[^002-1]: Explains goals.\n",
+            "损失是平方误差[^001-1]。\n\n[^001-1]: 解释损失。\n\n", "目标很重要[^002-1]。\n\n[^002-1]: 解释目标。\n",
+        )
+        self.assertEqual(code, 0, out)
+
+    def test_dropped_footnote_reference(self):
+        code, out = self.mini("Loss is squared error [^1].\n", "损失是平方误差。\n")
+        self.assertEqual(code, 1, out)
+        self.assertIn("脚注", out)
+
+    PROOFREAD = "## Goals\n\n" + "Users have goals and designers must understand them well. " * 10 + "\n\n![Image](images/fig-001.png)\n\nAbout Face 17\n"
+
+    def proofread(self, corrected):
+        zh = "## 目标\n\n" + "用户有目标。" * 10 + "\n"
+        if "![Image]" in corrected:
+            zh += "\n![Image](images/fig-001.png)\n"
+        if "About Face 17" in corrected:
+            zh += "\nAbout Face 17\n"
+        (self.ws / "images").mkdir(parents=True)
+        png(self.ws / "images" / "fig-001.png", 4, 4)
+        code, out = self.mini(corrected, zh, original=self.PROOFREAD)
+        self.assertEqual(code, 0, out)
+        return out
+
+    def test_proofreading_dropped_words_warns(self):
+        out = self.proofread("## Goals\n\n" + "Users have goals and designers must understand them well. " * 5 + "\n\n![Image](images/fig-001.png)\n")
+        self.assertIn("提醒", out)
+        self.assertIn("词数", out)
+
+    def test_proofreading_dropped_image_warns(self):
+        out = self.proofread(self.PROOFREAD.replace("![Image](images/fig-001.png)\n\n", ""))
+        self.assertIn("提醒", out)
+        self.assertIn("images/fig-001.png", out)
+
+    def test_proofreading_page_footer_removed_is_quiet(self):
+        out = self.proofread(self.PROOFREAD.replace("\n\nAbout Face 17", ""))
+        self.assertNotIn("提醒", out)
 
     def test_author_year_citations_are_not_untranslated(self):
         cites = "(Deng et al., 2013; Krizhevsky et al., 2012; Hinton & Salakhutdinov, 2006; Hinton et al., 2012a; Graves et al., 2013)"
