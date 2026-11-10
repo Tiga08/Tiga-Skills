@@ -31,6 +31,7 @@ python3 skills/tiga-skills/scripts/skills.py check     # 检查
 | retro | `mattpocock/skills` @ `4ae2317` | 用户级 | 复盘一次编码会话，从导航、自动检查、AGENTS.md 精简、工具开销等方面提出环境改进建议；依赖 writing-for-agents，仅手动调用。 |
 | short-video-editing | 自写 | 项目 `~/Projects/3Cups` | 把手机原片做成竖屏短视频发布包：素材分析、中文转写去废话、剪辑方案确认、生成 Final Cut Pro 工程（FCPXML）、字幕、封面与分平台文案；也出拍摄清单。 |
 | tiga-skills | 自写 | 用户级 | 管理本仓库：按清单安装用户级与项目级 skill，增删 skill，审查并采纳外部 skill 的上游更新，从关注列表发现新 skill。 |
+| translate-full-text | 自写 | 项目 `~/Projects/Tiga/Knowledge` | 把外文原版书或论文（PDF、EPUB）完整译成中文 Markdown 译文，保留图片、表格、公式和脚注，写入知识库条目；仅手动调用。 |
 | writing-for-agents | `mattpocock/skills` @ `4ae2317` | 用户级 | 编写供 Agent 读取的文档（skill、AGENTS.md、CLAUDE.md）的参考：上下文指针、信息层级、完成标准与精简；retro 的依赖。 |
 <!-- END SKILL LIST -->
 

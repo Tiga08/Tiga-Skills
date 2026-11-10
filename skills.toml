@@ -57,6 +57,10 @@ upstream = { repo = "https://github.com/anthropics/skills.git", path = "skills/f
 zh = "把手机原片做成竖屏短视频发布包：素材分析、中文转写去废话、剪辑方案确认、生成 Final Cut Pro 工程（FCPXML）、字幕、封面与分平台文案；也出拍摄清单。"
 targets = ["project:~/Projects/3Cups"]
 
+[skills.translate-full-text]
+zh = "把外文原版书或论文（PDF、EPUB）完整译成中文 Markdown 译文，保留图片、表格、公式和脚注，写入知识库条目；仅手动调用。"
+targets = ["project:~/Projects/Tiga/Knowledge"]
+
 # 候选上游仓库：只用于按需发现新 skill，不克隆、不同步。
 [watch]
 repos = [
