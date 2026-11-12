@@ -56,5 +56,9 @@ upstream = { repo = "https://github.com/anthropics/skills.git", path = "skills/f
 # 关注列表：按需发现新 skill 时浏览的上游仓库，install 与 update 不处理。
 [watch]
 repos = [
+  "https://github.com/addyosmani/agent-skills",
+  "https://github.com/anthropics/skills",
+  "https://github.com/lijigang/ljg-skills",
   "https://github.com/mattpocock/skills",
+  "https://github.com/obsidianmd/obsidian-skills",
 ]
