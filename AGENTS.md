@@ -1,6 +1,6 @@
 # Tiga-Skills
 
-个人 Agent Skills 库：自写 skill 与精选外部 skill 的唯一来源，通过符号链接提供给 Claude Code 与 Codex。
+个人 Agent Skills 库：可跨项目复用的自写 skill 与精选外部 skill 的唯一来源，通过符号链接提供给 Claude Code 与 Codex。只服务单个项目的 skill 放在该项目仓库的 `.agents/skills/`，不收进本仓库。
 
 ## 结构
 

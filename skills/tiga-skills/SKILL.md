@@ -26,6 +26,8 @@ python3 skills/tiga-skills/scripts/skills.py update [name...] --apply
 
 ## 新增自写 skill
 
+只服务单个项目的 skill 不收进本仓库，直接写在该项目的 `.agents/skills/<name>/`；可跨项目复用的才按以下步骤处理。
+
 1. 在 `skills/<name>/` 写 `SKILL.md`，`name` 与目录名一致。
 2. 在 `skills.toml` 添加 `[skills.<name>]`，填写 `zh` 与 `targets`；它调用其他 skill 时，把它们写进 `requires`。
 3. 运行 `install`、`check`。
@@ -61,7 +63,7 @@ python3 skills/tiga-skills/scripts/skills.py update [name...] --apply
 
 ## 发现新 skill
 
-1. 从 `skills.toml` 的 `[watch].repos` 选候选仓库；用户另给的仓库同样适用。
+1. 从关注列表（`skills.toml` 的 `[watch].repos`）选仓库；用户另给的仓库同样适用。
 2. 浅克隆到 `.tiga/cache/discover/`：`git clone --depth 1 --filter=blob:none <url> .tiga/cache/discover/<仓库名>`。该目录已存在时先删除再克隆，它只是缓存。
 3. 检索其中各 `SKILL.md` 的 `name` 与 `description`，按用户需求推荐少量候选，说明用途、依赖、是否自包含、与已有 skill 是否重叠。
 4. 用户选定后，按「引入外部 skill」处理。
